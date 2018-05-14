@@ -1,0 +1,15 @@
+C:\Users\Hernan\source\repos\Archivos\Diccionario_Datos\Diccionario_Datos\obj\Debug\DataDictionary.csprojResolveAssemblyReference.cache
+C:\Users\Hernan\source\repos\Archivos\Diccionario_Datos\Diccionario_Datos\obj\Debug\DataDictionary.Form1.resources
+C:\Users\Hernan\source\repos\Archivos\Diccionario_Datos\Diccionario_Datos\obj\Debug\Diccionario_Datos.Properties.Resources.resources
+C:\Users\Hernan\source\repos\Archivos\Diccionario_Datos\Diccionario_Datos\obj\Debug\DataDictionary.csproj.GenerateResource.Cache
+C:\Users\Hernan\source\repos\Archivos\Diccionario_Datos\Diccionario_Datos\obj\Debug\DataDictionary.csproj.CoreCompileInputs.cache
+C:\Users\Hernan\source\repos\Archivos\Diccionario_Datos\Diccionario_Datos\bin\Debug\Diccionario_Datos.exe.config
+C:\Users\Hernan\source\repos\Archivos\Diccionario_Datos\Diccionario_Datos\bin\Debug\Diccionario_Datos.exe
+C:\Users\Hernan\source\repos\Archivos\Diccionario_Datos\Diccionario_Datos\bin\Debug\Diccionario_Datos.pdb
+C:\Users\Hernan\source\repos\Archivos\Diccionario_Datos\Diccionario_Datos\obj\Debug\Diccionario_Datos.exe
+C:\Users\Hernan\source\repos\Archivos\Diccionario_Datos\Diccionario_Datos\obj\Debug\Diccionario_Datos.pdb
+C:\Users\Hernan\source\repos\Archivos\Diccionario_Datos\Diccionario_Datos\obj\Debug\DataDictionary.AddEntity.resources
+C:\Users\Hernan\source\repos\Archivos\Diccionario_Datos\Diccionario_Datos\obj\Debug\DataDictionary.AddAttribute.resources
+C:\Users\Hernan\source\repos\Archivos\Diccionario_Datos\Diccionario_Datos\obj\Debug\DataDictionary.AddData.resources
+C:\Users\Hernan\source\repos\Archivos\Diccionario_Datos\Diccionario_Datos\obj\Debug\DataDictionary.Add.resources
+C:\Users\Hernan\source\repos\Archivos\Diccionario_Datos\Diccionario_Datos\obj\Debug\DataDictionary.IndexView.resources
