@@ -67,6 +67,7 @@
     <Compile Include="AuxFile.cs" />
     <Compile Include="AuxIndex.cs" />
     <Compile Include="Entity.cs" />
+    <Compile Include="ForeignKey.cs" />
     <Compile Include="Form1.cs">
       <SubType>Form</SubType>
     </Compile>

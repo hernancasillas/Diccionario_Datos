@@ -100,7 +100,7 @@ namespace DataDictionary
 
                             string name = new string(newEntity.name);
 
-                            //cbEntidades.Items.Add(name);//Agrega la entidad creada al combobox para visualizar
+                            comboBox1.Items.Add(name);//Agrega la entidad creada al combobox para visualizar
 
                             if (newEntity.attributeDir != -1)//si existe atributos en la entidad
                             {
@@ -117,6 +117,97 @@ namespace DataDictionary
                                 newAtt.nextAttDir = reader.ReadInt64();
 
                                 newEntity.attributes.Add(newAtt);
+
+                                /*if (newAtt.indexType != -1)
+                                {
+
+                                    R.BaseStream.Seek(newAtt.indexDir, SeekOrigin.Begin);
+                                    if (newAtt.iIndice == 2)
+                                    {
+                                        for (int p = 0; p < 10; p++)
+                                        {
+                                            Mpk = new Pk();
+                                            if (newAtt.cTipo == 'C')
+                                            {
+                                                auxPk = string.Empty;
+                                                NomPk = R.ReadChars(newAtt.iLongitud);
+                                                for (int i = 0; i < NomPk.Count(); i++)
+                                                {
+                                                    auxPk += NomPk[i];
+                                                }
+                                                Mpk.oClave = auxPk;
+                                                Mpk.lDireccion = R.ReadInt64();
+                                                ent.ListPk.Add(Mpk);
+                                            }
+                                            else
+                                            {
+                                                auxPk = string.Empty;
+                                                Mpk.oClave = R.ReadInt32();
+                                                Mpk.lDireccion = R.ReadInt64();
+                                                ent.ListPk.Add(Mpk);
+                                            }
+                                        }
+                                    }
+
+                                    if (newAtt.iIndice == 3)
+                                    {
+                                        for (int f = 0; f < 5; f++)
+                                        {
+                                            Mfk = new Fk();
+                                            if (newAtt.cTipo == 'C')
+                                            {
+                                                auxFk = string.Empty;
+                                                NomFk = R.ReadChars(newAtt.iLongitud);
+                                                for (int i = 0; i < NomFk.Count(); i++)
+                                                {
+                                                    auxFk += NomFk[i];
+                                                }
+                                                Mfk.oClave = auxFk;
+                                                for (int d = 0; d < 10; d++)
+                                                {
+                                                    Mfk.lDirecciones.Add(R.ReadInt64());
+                                                }
+                                                ent.ListFk.Add(Mfk);
+
+                                            }
+                                            else
+                                            {
+                                                Mfk.oClave = R.ReadInt32();
+                                                for (int d = 0; d < 10; d++)
+                                                {
+                                                    Mfk.lDirecciones.Add(R.ReadInt64());
+                                                }
+                                                ent.ListFk.Add(Mfk);
+                                            }
+                                        }
+                                    }
+                                    if (newAtt.iIndice == 4)
+                                    {
+                                        Nodo n;
+                                        Nodo nuevo = LeeNodo(newAtt.lDirIndice);
+                                        ent.listNodos.Add(nuevo);
+                                        if (nuevo.cTipo == 'R')
+                                        {
+                                            for (int i = 0; i < nuevo.iDatos.Count + 1; i++)
+                                            {
+                                                n = LeeNodo(nuevo.lDirecciones[i]);
+                                                ent.listNodos.Add(n);
+                                                if (n.cTipo == 'I')
+                                                {
+                                                    for (int j = 0; j < n.lDirecciones.Count; j++)
+                                                    {
+                                                        Nodo nh = LeeNodo(n.lDirecciones[j]);
+                                                        ent.listNodos.Add(nh);
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                                /*if (newAtt.lDirSigAtributo != -1)
+                                {
+                                    R.BaseStream.Seek(newAtt.lDirSigAtributo, SeekOrigin.Begin);
+                                }*/
 
                                 while (newAtt.nextAttDir != -1) // Mientras exista otro atributo
                                 {
@@ -228,6 +319,7 @@ namespace DataDictionary
 
                         addData();
                         toolStripStatusLabel2.Text = " || Entity " + addEntity.name + " added";
+                        comboBox1.Items.Add(addEntity.name);
 
                     }
                 }
@@ -406,6 +498,17 @@ namespace DataDictionary
         {
             addData();
             addDataAttribute(selectedEntity);
+        }
+
+        private void comboBox1_SelectedIndexChanged(object sender, EventArgs e)
+        {
+            for (int i = 0; i < entities.Count; i++)
+            {
+                if(i == comboBox1.SelectedIndex)
+                {
+                    selectedEntity = entities[i];
+                }
+            }
         }
 
         private void deleteToolStripMenuItem1_Click(object sender, EventArgs e)

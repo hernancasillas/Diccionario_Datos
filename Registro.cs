@@ -10,8 +10,8 @@ namespace DataDictionary
     public class Data
     {
         public long dataDir; //Dirrecion actual del registro
-        public List<int> number;//Lista de enteros
-        public List<char[]> str;//Lista de cadenas
+        public List<int> number { get; set; }//Lista de enteros
+        public List<char[]> str { get; set; } //Lista de cadenas
         public long nextDir;//Dirrecion del siguinte registro
 
         public Data()

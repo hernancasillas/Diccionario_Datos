@@ -17,6 +17,7 @@ namespace DataDictionary
         public List<Attribute> attributes { get; set; }
         public List<Data> data { get; set; }
         public List<PrimaryKey> pk { get; set; }
+        public List<ForeignKey> fk { get; set; }
 
         public Entity()
         {
@@ -27,6 +28,8 @@ namespace DataDictionary
             nextDir = -1;
             attributes = new List<Attribute>();
             data = new List<Data>();
+            pk = new List<PrimaryKey>();
+            fk = new List<ForeignKey>();
         }
 
         public void SaveEntity(FileStream Archivo, BinaryWriter W)//Graba en el archivo los datos de la entidad

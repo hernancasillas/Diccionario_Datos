@@ -84,6 +84,16 @@ namespace DataDictionary
             return next;
         }
 
+        public char[] stringToChar(String Cad, int longitud)
+        {
+            char[] aux = new char[longitud];
+            for (int i = 0; i < Cad.Count(); i++)
+            {
+                aux[i] = Cad[i];
+            }
+            return aux;
+        }
+
         #endregion
 
         #region Entity
@@ -255,6 +265,58 @@ namespace DataDictionary
 
             stream.Close();
             stream.Dispose();
+        }
+
+        #endregion
+
+        #region PK
+        public void modificaPk(Entity Ent, int ind, BinaryWriter write)
+        {
+
+            write.BaseStream.Seek(Ent.attributes[ind].indexDir, SeekOrigin.Begin);
+            foreach (PrimaryKey p in Ent.pk)
+            {
+                if (Ent.attributes[ind].type == 'C')
+                {
+                    write.Write(stringToChar(p.oClave.ToString(), Ent.attributes[ind].length));
+                    write.Write(p.lDireccion);
+                }
+                else
+                {
+                    write.Write(Convert.ToInt32(p.oClave));
+                    write.Write(p.lDireccion);
+                }
+            }
+        }
+        #endregion
+
+        #region FK
+
+        ////MÉTODO DE MODIFICACIÓN DE CLAVE SECUNDARIA
+        public void ModificaFk(Entity Ent, int ind, BinaryWriter write)
+        {
+            write.BaseStream.Seek(Ent.attributes[ind].indexDir, SeekOrigin.Begin);
+            foreach (ForeignKey f in Ent.fk)
+            {
+                if (Ent.attributes[ind].type == 'C')
+                {
+                    write.Write(stringToChar(f.oClave.ToString(), Ent.attributes[ind].length));
+
+                    foreach (long l in f.lDirecciones)
+                    {
+                        write.Write(l);
+                    }
+                }
+                else
+                {
+                    write.Write(Convert.ToInt32(f.oClave));
+
+                    foreach (long l in f.lDirecciones)
+                    {
+                        write.Write(l);
+                    }
+                }
+            }
         }
 
         #endregion
