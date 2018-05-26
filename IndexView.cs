@@ -14,20 +14,25 @@ namespace DataDictionary
     {
         Entity entity;
         DataTable dataTFk;
-        bool isPk, isFk;
+        DataTable dataTTree;
+        bool isPk, isFk, isTree;
 
-        public IndexView(Entity entity, DataTable dataTfk)
+        public IndexView(Entity entity, DataTable dataTfk, DataTable dataTree)
         {
             this.entity = entity;
             InitializeComponent();
-            foreach(Attribute att in this.entity.attributes)
+            foreach (Attribute att in this.entity.attributes)
             {
-                switch(att.indexType)
+                switch (att.indexType)
                 {
-                    case 2: isPk = true;
+                    case 2:
+                        isPk = true;
                         break;
                     case 3:
                         isFk = true;
+                        break;
+                    case 4:
+                        isTree = true;
                         break;
                         /*case 2:
                             dataGridViewPK.Visible = true;
@@ -46,13 +51,16 @@ namespace DataDictionary
             this.dataTFk = dataTfk;
             dataGridView2.DataSource = dataTFk;
             addDataFK();
+            this.dataTTree = dataTree;
+            dataGridViewTREE.DataSource = dataTTree;
+            addDataTree();
 
         }
 
         private void addDataPK()
         {
-            
-            foreach(PrimaryKey pk in entity.pk)
+
+            foreach (PrimaryKey pk in entity.pk)
             {
                 //dataGridViewPK.Rows.Add(new object[] { pk.oClave, pk.lDireccion });
             }
@@ -79,7 +87,7 @@ namespace DataDictionary
                 r = dataTFk.NewRow();
                 int j = 0;
 
-               
+
                 r[j] = entity.fk[i].oClave;
 
                 j = 1;
@@ -89,6 +97,36 @@ namespace DataDictionary
                     j++;
                 }
                 dataTFk.Rows.Add(r);
+            }
+        }
+
+        private void addDataTree()
+        {
+            DataRow r;
+            dataTTree.Clear();
+            for (int i = 0; i < entity.nodos.Count; i++)
+            {
+                r = dataTTree.NewRow();
+                int j = 0, d = 0, a = 0;
+                r[j] = entity.nodos[i].lDireccionN;
+                j = 1;
+                r[j] = entity.nodos[i].cTipo;
+                j = 2;
+                while (d < entity.nodos[i].iDatos.Count || a < entity.nodos[i].lDirecciones.Count)
+                {
+                    if (j % 2 == 0)
+                    {
+                        r[j] = entity.nodos[i].lDirecciones[a];
+                        a++;
+                    }
+                    else
+                    {
+                        r[j] = entity.nodos[i].iDatos[d];
+                        d++;
+                    }
+                    j++;
+                }
+                dataTTree.Rows.Add(r);
             }
         }
     }

@@ -321,5 +321,94 @@ namespace DataDictionary
 
         #endregion
 
+        #region B+
+
+        //MÉTODO PARA ESCRIBIER EL NODO EN EL ARCHIVO
+        public void writeNode(Nodo n, BinaryWriter w)
+        {
+            long dir = -1;
+            int dat = 0;
+            w.BaseStream.Seek(n.lDireccionN, SeekOrigin.Begin);
+            w.Write(n.lDireccionN);
+            w.Write(n.cTipo);
+
+            if (n.cTipo == 'H')
+            {
+                for (int i = 0; i < 4; i++)
+                {
+                    if (n.iDatos.Count > i)
+                    {
+                        w.Write(n.lDirecciones[i]);
+                        w.Write(n.iDatos[i]);
+                    }
+                    else
+                    {
+                        w.Write(dir);
+                        w.Write(dat);
+                    }
+                }
+                w.Write(dir);
+            }
+            else
+            {
+                w.Write(n.lDirecciones[0]);
+                for (int i = 0; i < 4; i++)
+                {
+                    if (n.iDatos.Count > i)
+                    {
+                        w.Write(n.iDatos[i]);
+                        w.Write(n.lDirecciones[i + 1]);
+                    }
+                    else
+                    {
+                        w.Write(dat);
+                        w.Write(dir);
+                    }
+                }
+            }
+        }
+        //MÉTODO PARA LEER UN NODO
+        public Nodo readNode(long dirIndice, BinaryReader R)
+        {
+            Nodo nodo;
+            long dir;
+            int dato;
+            nodo = new Nodo();
+            R.BaseStream.Seek(dirIndice, SeekOrigin.Begin);
+            nodo.lDireccionN = R.ReadInt64();
+            nodo.cTipo = R.ReadChar();
+            if (nodo.cTipo == 'H')
+            {
+                for (int i = 0; i < 4; i++)
+                {
+                    dir = R.ReadInt64();
+                    dato = R.ReadInt32();
+                    if (dato != 0)
+                    {
+                        nodo.lDirecciones.Add(dir);
+                        nodo.iDatos.Add(dato);
+                    }
+                }
+            }
+            else
+            {
+                dir = R.ReadInt64();
+                nodo.lDirecciones.Add(dir);
+                for (int i = 0; i < 4; i++)
+                {
+                    dato = R.ReadInt32();
+                    dir = R.ReadInt64();
+                    if (dato != 0)
+                    {
+                        nodo.iDatos.Add(dato);
+                        nodo.lDirecciones.Add(dir);
+                    }
+                }
+            }
+            return nodo;
+        }
+
+        #endregion
+
     }
 }

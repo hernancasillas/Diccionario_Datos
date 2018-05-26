@@ -86,6 +86,7 @@
     <Compile Include="IndexView.Designer.cs">
       <DependentUpon>IndexView.cs</DependentUpon>
     </Compile>
+    <Compile Include="Nodo.cs" />
     <Compile Include="PrimaryKey.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
