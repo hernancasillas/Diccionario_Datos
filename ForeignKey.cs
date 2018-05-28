@@ -22,7 +22,7 @@ namespace DataDictionary
             set { clave = value; }
         }
 
-        public List<long> lDirecciones
+        public List<long> directions
         {
             get { return LDir; }
             set { LDir = value; }

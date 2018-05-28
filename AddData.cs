@@ -29,11 +29,11 @@ namespace DataDictionary
         static long head = -1, pos = head;
         bool newFile, isPk, isFk, isTree, isSK;
         string fileName, ddFileName, idxFileName, dir;
-        int ind, ip = 0, indFk, indArbol, fki = 0, indFound, advance, advanceFK, orden = 2, indR = 0, indPk;
-        int indNodoEliminar, indNInterElim;
+        int ind, ip = 0, indFk, indTree, fki = 0, indFound, advance, advanceFK, order = 2, indR = 0, indPk;
+        int indDeleteNode, indNInterElim;
 
-        Nodo nodo, Raiz;
-        List<Nodo> Lnodo = new List<Nodo>();
+        Node node, Root;
+        List<Node> Lnodo = new List<Node>();
         int indListNodo = 0;
 
         public AddData(List<Entity> Entities, AuxFile ddFile, string dir)
@@ -117,7 +117,7 @@ namespace DataDictionary
                 foreach(Attribute attribute in selectedEnt.attributes)
                 {
                     advance = (attribute.length + 8) * 20;
-                    //advanceFK = (attribute.length);
+                    advanceFK = ((8 * 20) + (attribute.length)) * 20;
 
                     string stAttName;
 
@@ -181,11 +181,11 @@ namespace DataDictionary
                             BinaryWriter writer = createIndexFile();
                             if (attribute.indexType == 1)
                                 isSK = true;
-                            copiaListaOrdenadaPk();
-                            copiaListaOrdenadaFk();
-                            verificaPk(writer);
-                            verificaFk(writer);
-                            verificaArbol(writer);
+                            copySortedListPK();
+                            copySortedListFK();
+                            verifyPK(writer);
+                            verifyFK(writer);
+                            verifyTree(writer);
                         }
 
                         if (attribute.indexDir == -1)
@@ -274,11 +274,11 @@ namespace DataDictionary
                                             if (atrib.indexType == 1)
                                                 isSK = true;
 
-                                            copiaListaOrdenadaPk();
-                                            copiaListaOrdenadaFk();
-                                            verificaPk(writer);
-                                            verificaFk(writer);
-                                            verificaArbol(writer);
+                                            copySortedListPK();
+                                            copySortedListFK();
+                                            verifyPK(writer);
+                                            verifyFK(writer);
+                                            verifyTree(writer);
                                         }
 
                                         if (atrib.indexType != 0 && atrib.indexType != 1)
@@ -343,7 +343,7 @@ namespace DataDictionary
                                                         Mfk.oClave = auxFk;
                                                         for (int d = 0; d < 20; d++)
                                                         {
-                                                            Mfk.lDirecciones.Add(R.ReadInt64());
+                                                            Mfk.directions.Add(R.ReadInt64());
                                                         }
                                                         selectedEnt.fk.Add(Mfk);
 
@@ -353,7 +353,7 @@ namespace DataDictionary
                                                         Mfk.oClave = R.ReadInt32();
                                                         for (int d = 0; d < 20; d++)
                                                         {
-                                                            Mfk.lDirecciones.Add(R.ReadInt64());
+                                                            Mfk.directions.Add(R.ReadInt64());
                                                         }
                                                         selectedEnt.fk.Add(Mfk);
                                                     }
@@ -361,32 +361,33 @@ namespace DataDictionary
                                             }
                                             if (atrib.indexType == 4)
                                             { 
-                                                Nodo n;
-                                                Nodo nuevo = idxFile.readNode(atrib.indexDir, R);
-                                                selectedEnt.nodos.Add(nuevo);
-                                                if (nuevo.cTipo == 'R')
+                                                Node n;
+                                                Node nuevo = idxFile.readNode(atrib.indexDir, R);
+                                                selectedEnt.nodes.Add(nuevo);
+                                                if (nuevo.type == 'R')
                                                 {
-                                                    for (int i = 0; i < nuevo.iDatos.Count + 1; i++)
+                                                    for (int i = 0; i < nuevo.dataL.Count + 1; i++)
                                                     {
-                                                        n = idxFile.readNode(nuevo.lDirecciones[i], R);
-                                                        selectedEnt.nodos.Add(n);
-                                                        if (n.cTipo == 'I')
+                                                        n = idxFile.readNode(nuevo.directions[i], R);
+                                                        selectedEnt.nodes.Add(n);
+                                                        if (n.type == 'I')
                                                         {
-                                                            for (int j = 0; j < n.lDirecciones.Count; j++)
+                                                            for (int j = 0; j < n.directions.Count; j++)
                                                             {
-                                                                Nodo nh = idxFile.readNode(n.lDirecciones[j], R);
-                                                                selectedEnt.nodos.Add(nh);
+                                                                Node nh = idxFile.readNode(n.directions[j], R);
+                                                                selectedEnt.nodes.Add(nh);
                                                             }
                                                         }
                                                     }
                                                 }
                                             }
-                                            copiaListaOrdenadaPk();
-                                            copiaListaOrdenadaFk();
-                                            verificaPk(write);
+                                            copySortedListPK();
+                                            copySortedListFK();
+                                            verifyPK(write);
                                             if(isFk)
-                                            verificaFk(write);
-                                            verificaArbol(write);
+                                            verifyFK(write);
+                                            if(isTree)
+                                            verifyTree(write);
                                             idxFile.stream.Close();
                                         }
                                         
@@ -488,7 +489,7 @@ namespace DataDictionary
 
         #region PK
 
-        private void ordenaPk()
+        private void sortPK()
         {
             for (ip = 0; ip < 20; ip++)
             {
@@ -505,7 +506,7 @@ namespace DataDictionary
             }
         }
         //VERIFICA SI LA ENTIDAD TIENE CLAVE PRIMARIA Y CREA LOS BLOQUES
-        private void verificaPk(BinaryWriter w)
+        private void verifyPK(BinaryWriter w)
         {
             long pos = w.BaseStream.Length;
             long posdd = selectedEnt.attributeDir;
@@ -563,7 +564,7 @@ namespace DataDictionary
             }
         }
         //DESPUES DE ABRIR EL ARCHIVO COPIA LA LISTA DE LA CLAVE PRIMARIA
-        private void copiaListaOrdenadaPk()
+        private void copySortedListPK()
         {
             if (selectedEnt.pk.Count > 0)
             {
@@ -592,7 +593,7 @@ namespace DataDictionary
          * MÉTODOS PARA CLAVE SECUNDARIA             
         */
         //vERIFICA SI LA ENTIDAD CUENTA CON UNA CLAVE SECUNDARIA Y CREA LOS BLOQUES
-        private void verificaFk(BinaryWriter w)
+        private void verifyFK(BinaryWriter w)
         {
             long pos;
             //w = new BinaryWriter(idxFile.stream, Encoding.UTF8);
@@ -621,14 +622,14 @@ namespace DataDictionary
 
                             for (int j = 0; j < 20; j++)
                             {
-                                fk.lDirecciones.Add(-1);
+                                fk.directions.Add(-1);
                             }
                             selectedEnt.fk.Add(fk);
                             if (selectedEnt.attributes[i].type == 'C')
                             {
 
                                 w.Write(StringToChar(fk.oClave.ToString(), selectedEnt.attributes[i].length));
-                                foreach (long l in fk.lDirecciones)
+                                foreach (long l in fk.directions)
                                 {
                                     w.Write(l);
                                 }
@@ -636,7 +637,7 @@ namespace DataDictionary
                             else
                             {
                                 w.Write(Convert.ToInt32(fk.oClave));
-                                foreach (long l in fk.lDirecciones)
+                                foreach (long l in fk.directions)
                                 {
                                     w.Write(l);
                                 }
@@ -669,7 +670,7 @@ namespace DataDictionary
             }
         }
         //MÉTODO DE ORDENACIÓN DE CLAVE SECUNDARIA
-        private void ordenaFk()
+        private void sortFK()
         {
             for (int ifk = 0; ifk < 20; ifk++)
             {
@@ -678,10 +679,10 @@ namespace DataDictionary
                     selectedEnt.fk[ifk].oClave = sortedFKlist[ifk].oClave;
                     for (int j = 0; j < 20; j++)
                     {
-                        if (j < sortedFKlist[ifk].lDirecciones.Count)
-                            selectedEnt.fk[ifk].lDirecciones[j] = sortedFKlist[ifk].lDirecciones[j];
+                        if (j < sortedFKlist[ifk].directions.Count)
+                            selectedEnt.fk[ifk].directions[j] = sortedFKlist[ifk].directions[j];
                         else
-                            selectedEnt.fk[ifk].lDirecciones[j] = -1;
+                            selectedEnt.fk[ifk].directions[j] = -1;
                     }
                 }
                 else
@@ -691,20 +692,20 @@ namespace DataDictionary
                     else selectedEnt.fk[ifk].oClave = 0;
                     for (int j = 0; j < 20; j++)
                     {
-                        selectedEnt.fk[ifk].lDirecciones[j] = -1;
+                        selectedEnt.fk[ifk].directions[j] = -1;
                     }
 
                 }
             }
         }
         //MÉTODO QUE BUSCA SI YA EXISTE LA CLAVE E INSERTA LA DIRECCIÓN EN SU LISTA.
-        private bool busca(int type)
+        private bool searchFK(int type)
         {
             bool band = false;
             string compare;
             for (int ifk = 0; ifk < 20; ifk++)
             {
-                if (selectedEnt.fk[ifk].lDirecciones[0] != -1)
+                if (selectedEnt.fk[ifk].directions[0] != -1)
                 {
                     if(data.str.Count !=0)
                     {
@@ -714,7 +715,7 @@ namespace DataDictionary
                             if (compare == selectedEnt.fk[ifk].oClave.ToString())
                             {
                                 indFound = ifk;
-                                sortedFKlist[ifk].lDirecciones.Add(data.dataDir);
+                                sortedFKlist[ifk].directions.Add(data.dataDir);
                                 band = true;
 
                             }
@@ -725,7 +726,7 @@ namespace DataDictionary
                             if (compare == selectedEnt.fk[ifk].oClave.ToString())
                             {
                                 indFound = ifk;
-                                sortedFKlist[ifk].lDirecciones.Add(data.dataDir);
+                                sortedFKlist[ifk].directions.Add(data.dataDir);
                                 band = true;
 
                             }
@@ -736,7 +737,7 @@ namespace DataDictionary
                             if (compare == selectedEnt.fk[ifk].oClave.ToString())
                             {
                                 indFound = ifk;
-                                sortedFKlist[ifk].lDirecciones.Add(data.dataDir);
+                                sortedFKlist[ifk].directions.Add(data.dataDir);
                                 band = true;
 
                             }
@@ -752,7 +753,7 @@ namespace DataDictionary
                             if (data.number[indFk].ToString() == selectedEnt.fk[ifk].oClave.ToString())
                             {
                                 indFound = ifk;
-                                sortedFKlist[ifk].lDirecciones.Add(data.dataDir);
+                                sortedFKlist[ifk].directions.Add(data.dataDir);
                                 band = true;
                             }
                         //else if(!isPk && type == 'I')
@@ -764,7 +765,7 @@ namespace DataDictionary
 
         }
         //MÉTODO PARA LLENAR EL DATAGIRDVIEW DE LA CLAVE SECUNDARIA
-        private void llenaDataFk()
+        private void fillDataFK()
         {
             /*DataRow r;
             dataTFk.Clear();
@@ -774,31 +775,31 @@ namespace DataDictionary
                 int j = 0;
                 r[j] = selectedEnt.fk[i].oClave;
                 j = 1;
-                for (int c = 0; c < selectedEnt.fk[i].lDirecciones.Count; c++)
+                for (int c = 0; c < selectedEnt.fk[i].directions.Count; c++)
                 {
-                    r[j] = selectedEnt.fk[i].lDirecciones[c];
+                    r[j] = selectedEnt.fk[i].directions[c];
                     j++;
                 }
                 dataTFk.Rows.Add(r);
             }*/
         }
         //DESPUES DE ABRIR EL ARCHIVO COPIA LA LISTA DE LA CLAVE SECUNDARIA
-        private void copiaListaOrdenadaFk()
+        private void copySortedListFK()
         {
             if (selectedEnt.fk.Count > 0)
             {
                 isFk = true;
                 for (fki = 0; fki < 20; fki++)
                 {
-                    if (selectedEnt.fk[fki].lDirecciones[0] != -1)
+                    if (selectedEnt.fk[fki].directions[0] != -1)
                     {
                         fk = new ForeignKey();
                         fk.oClave = selectedEnt.fk[fki].oClave;
                         for (int d = 0; d < 20; d++)
                         {
-                            if (selectedEnt.fk[fki].lDirecciones[d] != -1)
+                            if (selectedEnt.fk[fki].directions[d] != -1)
                             {
-                                fk.lDirecciones.Add(selectedEnt.fk[fki].lDirecciones[d]);
+                                fk.directions.Add(selectedEnt.fk[fki].directions[d]);
                             }
                         }
                         sortedFKlist.Add(fk);
@@ -820,17 +821,25 @@ namespace DataDictionary
             dataTArbol.Columns.Add("NodeDir");
             dataTArbol.Columns.Add("Type");
             dataTArbol.Columns.Add("P1");
-            for (int i = 0; i < orden * 2; i++)
+            for (int i = 0; i < order * 2; i++)
             {
                 dataTArbol.Columns.Add("Data" + (i + 1).ToString());
                 dataTArbol.Columns.Add("P" + (i + 2).ToString());
             }
         }
         //MÉTODO DE VERIFICACIÓN DE ARBOL B+
-        private void verificaArbol(BinaryWriter w)
+        private void verifyTree(BinaryWriter w)
         {
             long pos = w.BaseStream.Length;
-            if (selectedEnt.nodos.Count == 0)
+
+            if (isPk && !isFk)
+                pos = advance;
+            else if (isPk && isFk)
+                pos = advance + advanceFK;
+            else if (isFk && !isPk)
+                pos = advanceFK;
+
+            if (selectedEnt.nodes.Count == 0)
             {
                 for (int i = 0; i < selectedEnt.attributes.Count; i++)
                 {
@@ -839,11 +848,11 @@ namespace DataDictionary
                         selectedEnt.attributes[i].indexDir = pos;
                         isTree = true;
                         DataTableArbol();
-                        indArbol = i;
-                        nodo = new Nodo();
-                        nodo.lDireccionN = pos;
-                        selectedEnt.nodos.Add(nodo);
-                        idxFile.writeNode(nodo, w);
+                        indTree = i;
+                        node = new Node();
+                        node.nodeDir = pos;
+                        selectedEnt.nodes.Add(node);
+                        idxFile.writeNode(node, w);
                         pos = selectedEnt.attributes[i].attributeDir;
                         
                         ddFile.modifyAttribute(pos, selectedEnt.attributes[i]);
@@ -857,318 +866,318 @@ namespace DataDictionary
             }
         }
         //MÉTODO PARA INSERTAR UNA CLAVE AL ARBOL
-        private void InsertaClave(BinaryWriter w, int clave, long dir)
+        private void insertKey(BinaryWriter w, int clave, long dir)
         {
-            bool repetido = false;
-            foreach (Nodo r in selectedEnt.nodos)//Checa si existe la raiz
+            bool repeated = false;
+            foreach (Node r in selectedEnt.nodes)//Checa si existe la raiz
             {
-                if (r.cTipo == 'R')
-                    Raiz = r;
+                if (r.type == 'R')
+                    Root = r;
             }
 
-            if (Raiz == null)
+            if (Root == null)
             {
-                if (nodo.iDatos.Contains(clave))
-                    repetido = true;
+                if (node.dataL.Contains(clave))
+                    repeated = true;
 
-                if (!repetido)
+                if (!repeated)
                 {
-                    if (nodo.iDatos.Count < 4)
+                    if (node.dataL.Count < 4)
                     {
-                        nodo.lDirecciones.Add(dir);
-                        nodo.iDatos.Add(clave);
-                        if (nodo.iDatos.Count > 1)
-                            ordenaNodo(nodo);
-                        idxFile.writeNode(nodo, w);
-                        selectedEnt.nodos[0] = nodo;
+                        node.directions.Add(dir);
+                        node.dataL.Add(clave);
+                        if (node.dataL.Count > 1)
+                            sortNodes(node);
+                        idxFile.writeNode(node, w);
+                        selectedEnt.nodes[0] = node;
                     }
-                    else//Se crea la Raiz
+                    else//Se crea la raiz
                     {
-                        Nodo Aux = nodo;
-                        nodo = new Nodo();
-                        nodo.lDireccionN = w.BaseStream.Length;
-                        Aux.lDirecciones.Add(dir);
-                        Aux.iDatos.Add(clave);
-                        ordenaNodo(Aux);
-                        DivideNodoyEliminaClaves(Aux, nodo);
-                        ordenaNodo(nodo);
-                        selectedEnt.nodos[0] = Aux;
-                        selectedEnt.nodos.Add(nodo);
+                        Node Aux = node;
+                        node = new Node();
+                        node.nodeDir = w.BaseStream.Length;
+                        Aux.directions.Add(dir);
+                        Aux.dataL.Add(clave);
+                        sortNodes(Aux);
+                        SplitNodeNinsertKeys(Aux, node);
+                        sortNodes(node);
+                        selectedEnt.nodes[0] = Aux;
+                        selectedEnt.nodes.Add(node);
                         idxFile.writeNode(Aux, w);
-                        idxFile.writeNode(nodo, w);
-                        Raiz = new Nodo();
-                        Raiz.cTipo = 'R';
-                        Raiz.lDireccionN = w.BaseStream.Length;
-                        Raiz.lDirecciones.Add(Aux.lDireccionN);
-                        Raiz.lDirecciones.Add(nodo.lDireccionN);
-                        Raiz.iDatos.Add(nodo.iDatos[0]);
-                        selectedEnt.nodos.Add(Raiz);
-                        idxFile.writeNode(Raiz, w);
-                        indR = selectedEnt.nodos.Count - 1;
+                        idxFile.writeNode(node, w);
+                        Root = new Node();
+                        Root.type = 'R';
+                        Root.nodeDir = w.BaseStream.Length;
+                        Root.directions.Add(Aux.nodeDir);
+                        Root.directions.Add(node.nodeDir);
+                        Root.dataL.Add(node.dataL[0]);
+                        selectedEnt.nodes.Add(Root);
+                        idxFile.writeNode(Root, w);
+                        indR = selectedEnt.nodes.Count - 1;
                     }
                 }
-                if (Raiz != null)
+                if (Root != null)
                 {
-                    selectedEnt.attributes[indArbol].indexDir = Raiz.lDireccionN;
-                    ddFile.modifyAttribute(selectedEnt.attributes[indArbol].attributeDir, selectedEnt.attributes[indArbol]);
+                    selectedEnt.attributes[indTree].indexDir = Root.nodeDir;
+                    ddFile.modifyAttribute(selectedEnt.attributes[indTree].attributeDir, selectedEnt.attributes[indTree]);
                 }
 
             }
             else//Se crean los intermedios
             {
-                Nodo rNodo = new Nodo();
-                Nodo iNodo = new Nodo();
-                Nodo nAnterior;
-                rNodo = ChecaLugarDeinsersion(Raiz, clave);
-                nAnterior = Raiz;
-                if (rNodo.cTipo == 'I')//checa en caso de que existan nodos intermedios
+                Node rootNode = new Node();
+                Node interNode = new Node();
+                Node prevNode;
+                rootNode = whereToInsert(Root, clave);
+                prevNode = Root;
+                if (rootNode.type == 'I')//checa en caso de que existan nodes intermedios
                 {
-                    nAnterior = rNodo;
-                    iNodo = ChecaLugarDeinsersion(rNodo, clave);
-                    rNodo = iNodo;
+                    prevNode = rootNode;
+                    interNode = whereToInsert(rootNode, clave);
+                    rootNode = interNode;
                 }
 
-                if (rNodo.iDatos.Count < 4)
+                if (rootNode.dataL.Count < 4)
                 {
-                    rNodo.lDirecciones.Add(dir);
-                    rNodo.iDatos.Add(clave);
-                    if (rNodo.iDatos.Count > 1)
-                        ordenaNodo(rNodo);
-                    idxFile.writeNode(rNodo, w);
-                    selectedEnt.nodos[indListNodo] = rNodo;
+                    rootNode.directions.Add(dir);
+                    rootNode.dataL.Add(clave);
+                    if (rootNode.dataL.Count > 1)
+                        sortNodes(rootNode);
+                    idxFile.writeNode(rootNode, w);
+                    selectedEnt.nodes[indListNodo] = rootNode;
                 }
                 else
                 {
-                    if (nAnterior == Raiz)
+                    if (prevNode == Root)
                     {
-                        Nodo Aux = rNodo;
-                        nodo = new Nodo();
-                        nodo.lDireccionN = w.BaseStream.Length;
-                        Aux.lDirecciones.Add(dir);
-                        Aux.iDatos.Add(clave);
-                        ordenaNodo(Aux);
-                        DivideNodoyEliminaClaves(Aux, nodo);
-                        ordenaNodo(nodo);
-                        selectedEnt.nodos[indListNodo] = Aux;
-                        selectedEnt.nodos.Add(nodo);
+                        Node Aux = rootNode;
+                        node = new Node();
+                        node.nodeDir = w.BaseStream.Length;
+                        Aux.directions.Add(dir);
+                        Aux.dataL.Add(clave);
+                        sortNodes(Aux);
+                        SplitNodeNinsertKeys(Aux, node);
+                        sortNodes(node);
+                        selectedEnt.nodes[indListNodo] = Aux;
+                        selectedEnt.nodes.Add(node);
                         idxFile.writeNode(Aux, w);
-                        idxFile.writeNode(nodo, w);
-                        if (Raiz.iDatos.Count < 4)
+                        idxFile.writeNode(node, w);
+                        if (Root.dataL.Count < 4)
                         {
-                            Raiz.lDirecciones.Add(nodo.lDireccionN);
-                            Raiz.iDatos.Add(nodo.iDatos[0]);
-                            ordenaNodo(Raiz);
-                            selectedEnt.nodos[indR] = Raiz;
+                            Root.directions.Add(node.nodeDir);
+                            Root.dataL.Add(node.dataL[0]);
+                            sortNodes(Root);
+                            selectedEnt.nodes[indR] = Root;
                         }
                         else
                         {
-                            Nodo nint = new Nodo();
-                            nint.cTipo = 'I';
-                            nint.lDireccionN = w.BaseStream.Length;
-                            Nodo nAux = Raiz;
-                            nAux.iDatos.Add(nodo.iDatos[0]);
-                            ordenaNodo(nAux);
-                            DivideNodoyEliminaClaves(nAux, nint);
-                            ordenaNodo(nint);
-                            nAux.cTipo = 'I';
-                            for (int i = 0; i < selectedEnt.nodos.Count; i++)
+                            Node nint = new Node();
+                            nint.type = 'I';
+                            nint.nodeDir = w.BaseStream.Length;
+                            Node nAux = Root;
+                            nAux.dataL.Add(node.dataL[0]);
+                            sortNodes(nAux);
+                            SplitNodeNinsertKeys(nAux, nint);
+                            sortNodes(nint);
+                            nAux.type = 'I';
+                            for (int i = 0; i < selectedEnt.nodes.Count; i++)
                             {
-                                if (selectedEnt.nodos[i].lDireccionN == Raiz.lDireccionN)
-                                    selectedEnt.nodos[i] = nAux;
+                                if (selectedEnt.nodes[i].nodeDir == Root.nodeDir)
+                                    selectedEnt.nodes[i] = nAux;
                             }
                             idxFile.writeNode(nAux, w);
-                            Raiz = new Nodo();
-                            Raiz.cTipo = 'R';
-                            Raiz.lDirecciones.Add(nAux.lDireccionN);
-                            Raiz.lDirecciones.Add(nint.lDireccionN);
-                            Raiz.iDatos.Add(nint.iDatos[0]);
-                            indR = selectedEnt.nodos.Count - 1;
-                            nint.iDatos.RemoveAt(0);
-                            nint.lDirecciones.RemoveAt(0);
-                            nint.lDirecciones.Add(nodo.lDireccionN);
+                            Root = new Node();
+                            Root.type = 'R';
+                            Root.directions.Add(nAux.nodeDir);
+                            Root.directions.Add(nint.nodeDir);
+                            Root.dataL.Add(nint.dataL[0]);
+                            indR = selectedEnt.nodes.Count - 1;
+                            nint.dataL.RemoveAt(0);
+                            nint.directions.RemoveAt(0);
+                            nint.directions.Add(node.nodeDir);
                             idxFile.writeNode(nint, w);
-                            Raiz.lDireccionN = w.BaseStream.Length;
-                            selectedEnt.nodos.Add(nint);
-                            idxFile.writeNode(Raiz, w);
-                            selectedEnt.nodos.Add(Raiz);
+                            Root.nodeDir = w.BaseStream.Length;
+                            selectedEnt.nodes.Add(nint);
+                            idxFile.writeNode(Root, w);
+                            selectedEnt.nodes.Add(Root);
                         }
                     }
                     else
                     {
-                        Nodo Aux = rNodo;
-                        nodo = new Nodo();
-                        nodo.lDireccionN = w.BaseStream.Length;
-                        Aux.lDirecciones.Add(dir);
-                        Aux.iDatos.Add(clave);
-                        ordenaNodo(Aux);
-                        DivideNodoyEliminaClaves(Aux, nodo);
-                        ordenaNodo(nodo);
-                        selectedEnt.nodos[indListNodo] = Aux;
-                        selectedEnt.nodos.Add(nodo);
+                        Node Aux = rootNode;
+                        node = new Node();
+                        node.nodeDir = w.BaseStream.Length;
+                        Aux.directions.Add(dir);
+                        Aux.dataL.Add(clave);
+                        sortNodes(Aux);
+                        SplitNodeNinsertKeys(Aux, node);
+                        sortNodes(node);
+                        selectedEnt.nodes[indListNodo] = Aux;
+                        selectedEnt.nodes.Add(node);
                         idxFile.writeNode(Aux, w);
-                        idxFile.writeNode(nodo, w);
-                        if (nAnterior.iDatos.Count < 4)
+                        idxFile.writeNode(node, w);
+                        if (prevNode.dataL.Count < 4)
                         {
-                            Nodo Intermedio = nAnterior;
-                            Intermedio.iDatos.Add(nodo.iDatos[0]);
-                            Intermedio.lDirecciones.Add(nodo.lDireccionN);
-                            ordenaNodo(Intermedio);
-                            for (int i = 0; i < selectedEnt.nodos.Count; i++)
+                            Node Intermedio = prevNode;
+                            Intermedio.dataL.Add(node.dataL[0]);
+                            Intermedio.directions.Add(node.nodeDir);
+                            sortNodes(Intermedio);
+                            for (int i = 0; i < selectedEnt.nodes.Count; i++)
                             {
-                                if (selectedEnt.nodos[i].lDireccionN == Intermedio.lDireccionN)
-                                    selectedEnt.nodos[i] = Intermedio;
+                                if (selectedEnt.nodes[i].nodeDir == Intermedio.nodeDir)
+                                    selectedEnt.nodes[i] = Intermedio;
                             }
                             idxFile.writeNode(Intermedio, w);
-                            Intermedio = nAnterior;
+                            Intermedio = prevNode;
                         }
                         else
                         {
-                            Nodo Nuevoint = new Nodo();
-                            Nuevoint.lDireccionN = w.BaseStream.Length;
-                            Nuevoint.cTipo = 'I';
+                            Node newInter = new Node();
+                            newInter.nodeDir = w.BaseStream.Length;
+                            newInter.type = 'I';
 
-                            nAnterior.iDatos.Add(nodo.iDatos[0]);
-                            nAnterior.lDirecciones.Add(nodo.lDireccionN);
-                            ordenaNodo(nAnterior);
-                            Raiz.iDatos.Add(nAnterior.iDatos[2]);
-                            DivideNodoyEliminaClaves(nAnterior, Nuevoint);
-                            ordenaNodo(Nuevoint);
-                            idxFile.writeNode(Nuevoint, w);
-                            idxFile.writeNode(Raiz, w);
-                            idxFile.writeNode(nAnterior, w);
-                            for (int i = 0; i < selectedEnt.nodos.Count; i++)
+                            prevNode.dataL.Add(node.dataL[0]);
+                            prevNode.directions.Add(node.nodeDir);
+                            sortNodes(prevNode);
+                            Root.dataL.Add(prevNode.dataL[2]);
+                            SplitNodeNinsertKeys(prevNode, newInter);
+                            sortNodes(newInter);
+                            idxFile.writeNode(newInter, w);
+                            idxFile.writeNode(Root, w);
+                            idxFile.writeNode(prevNode, w);
+                            for (int i = 0; i < selectedEnt.nodes.Count; i++)
                             {
-                                if (selectedEnt.nodos[i].lDireccionN == nAnterior.lDireccionN)
-                                    selectedEnt.nodos[i] = nAnterior;
-                                if (selectedEnt.nodos[i].lDireccionN == Raiz.lDireccionN)
-                                    selectedEnt.nodos[i] = Raiz;
+                                if (selectedEnt.nodes[i].nodeDir == prevNode.nodeDir)
+                                    selectedEnt.nodes[i] = prevNode;
+                                if (selectedEnt.nodes[i].nodeDir == Root.nodeDir)
+                                    selectedEnt.nodes[i] = Root;
 
                             }
                         }
                     }
                 }
             }
-            if (Raiz != null)
+            if (Root != null)
             {
-                selectedEnt.attributes[indArbol].indexDir = Raiz.lDireccionN;
-                ddFile.modifyAttribute(selectedEnt.attributes[indArbol].attributeDir, selectedEnt.attributes[indArbol]);
+                selectedEnt.attributes[indTree].indexDir = Root.nodeDir;
+                ddFile.modifyAttribute(selectedEnt.attributes[indTree].attributeDir, selectedEnt.attributes[indTree]);
             }
         }
         //MÉTODO QUE DIVIDE UN NODO EN CASO DE QUE SE QUIERA INSERTAR UNA CLAVE Y ESTE YA ESTE LLENO
-        private void DivideNodoyEliminaClaves(Nodo Aux, Nodo nd)
+        private void SplitNodeNinsertKeys(Node Aux, Node nd)
         {
             int nEliminado = 0;
             int contE = 3;
-            for (int i = 2; i < Aux.iDatos.Count; i++)
+            for (int i = 2; i < Aux.dataL.Count; i++)
             {
-                nd.iDatos.Add(Aux.iDatos[i]);
-                nd.lDirecciones.Add(Aux.lDirecciones[i]);
+                nd.dataL.Add(Aux.dataL[i]);
+                nd.directions.Add(Aux.directions[i]);
                 nEliminado = i + 1;
             }
 
-            if (nd.cTipo == 'I')
+            if (nd.type == 'I')
             {
                 contE = 2;
                 nEliminado--;
-                Aux.iDatos.RemoveAt(nEliminado);
+                Aux.dataL.RemoveAt(nEliminado);
             }
 
             for (int nE = 0; nE < contE; nE++)
             {
                 nEliminado--;
-                Aux.iDatos.RemoveAt(nEliminado);
-                if (nd.cTipo == 'I') nEliminado++;
-                Aux.lDirecciones.RemoveAt(nEliminado);
-                if (nd.cTipo == 'I') nEliminado--;
+                Aux.dataL.RemoveAt(nEliminado);
+                if (nd.type == 'I') nEliminado++;
+                Aux.directions.RemoveAt(nEliminado);
+                if (nd.type == 'I') nEliminado--;
             }
         }
+
         //CHECA EN QUE NODO VA A SER INSERTADO EL NUEVO DATO
-        private Nodo ChecaLugarDeinsersion(Nodo nd, int clave)
+        private Node whereToInsert(Node nd, int key)
         {
-            Nodo aux = new Nodo();
-            for (int r = 0; r < nd.iDatos.Count; r++)
+            Node aux = new Node();
+            for (int r = 0; r < nd.dataL.Count; r++)
             {
-                if (clave > nd.iDatos[r])
+                if (key > nd.dataL[r])
                 {
-                    for (int ni = 0; ni < selectedEnt.nodos.Count; ni++)
+                    for (int ni = 0; ni < selectedEnt.nodes.Count; ni++)
                     {
-                        if (selectedEnt.nodos[ni].lDireccionN == nd.lDirecciones[r + 1])
+                        if (selectedEnt.nodes[ni].nodeDir == nd.directions[r + 1])
                         {
-                            aux = selectedEnt.nodos[ni];
+                            aux = selectedEnt.nodes[ni];
                             indListNodo = ni;
                         }
                     }
                 }
                 else
                 {
-                    for (int ni = 0; ni < selectedEnt.nodos.Count; ni++)
+                    for (int ni = 0; ni < selectedEnt.nodes.Count; ni++)
                     {
-                        if (selectedEnt.nodos[ni].lDireccionN == nd.lDirecciones[r])
+                        if (selectedEnt.nodes[ni].nodeDir == nd.directions[r])
                         {
-                            aux = selectedEnt.nodos[ni];
+                            aux = selectedEnt.nodes[ni];
                             indListNodo = ni;
 
                         }
                     }
-                    r = nd.iDatos.Count;
+                    r = nd.dataL.Count;
                 }
             }
             return aux;
         }
         //MÉTODO DE ORDENACIÓN DE DATOS EN UN NODO
-        private void ordenaNodo(Nodo n)
+        private void sortNodes(Node n)
         {
 
-            for (int oa = 0; oa < n.iDatos.Count; oa++)
-                for (int o = 0; o < n.iDatos.Count - 1; o++)
+            for (int oa = 0; oa < n.dataL.Count; oa++)
+                for (int o = 0; o < n.dataL.Count - 1; o++)
                 {
-                    if (n.iDatos[o] > n.iDatos[o + 1])
+                    if (n.dataL[o] > n.dataL[o + 1])
                     {
-                        if (n.cTipo == 'H')
+                        if (n.type == 'H')
                         {
-                            int menor = n.iDatos[o + 1];
-                            long apMenor = n.lDirecciones[o + 1];
-                            n.iDatos[o + 1] = n.iDatos[o];
-                            n.lDirecciones[o + 1] = n.lDirecciones[o];
-                            n.iDatos[o] = menor;
-                            n.lDirecciones[o] = apMenor;
+                            int menor = n.dataL[o + 1];
+                            long apMenor = n.directions[o + 1];
+                            n.dataL[o + 1] = n.dataL[o];
+                            n.directions[o + 1] = n.directions[o];
+                            n.dataL[o] = menor;
+                            n.directions[o] = apMenor;
                         }
                         else
                         {
-                            int menor = n.iDatos[o + 1];
-                            long apMenor = n.lDirecciones[o + 2];
-                            n.iDatos[o + 1] = n.iDatos[o];
-                            n.lDirecciones[o + 2] = n.lDirecciones[o + 1];
-                            n.iDatos[o] = menor;
-                            n.lDirecciones[o + 1] = apMenor;
+                            int menor = n.dataL[o + 1];
+                            long apMenor = n.directions[o + 2];
+                            n.dataL[o + 1] = n.dataL[o];
+                            n.directions[o + 2] = n.directions[o + 1];
+                            n.dataL[o] = menor;
+                            n.directions[o + 1] = apMenor;
                         }
                     }
                 }
         }
         //METODO PARA LLENAR EL DATAGRID DEL ARBOL B+
-        private void llenaDataGridArbol()
+        private void fillDataGridTree()
         {
-
             DataRow r;
             dataTArbol.Clear();
-            for (int i = 0; i < selectedEnt.nodos.Count; i++)
+            for (int i = 0; i < selectedEnt.nodes.Count; i++)
             {
                 r = dataTArbol.NewRow();
                 int j = 0, d = 0, a = 0;
-                r[j] = selectedEnt.nodos[i].lDireccionN;
+                r[j] = selectedEnt.nodes[i].nodeDir;
                 j = 1;
-                r[j] = selectedEnt.nodos[i].cTipo;
+                r[j] = selectedEnt.nodes[i].type;
                 j = 2;
-                while (d < selectedEnt.nodos[i].iDatos.Count || a < selectedEnt.nodos[i].lDirecciones.Count)
+                while (d < selectedEnt.nodes[i].dataL.Count || a < selectedEnt.nodes[i].directions.Count)
                 {
                     if (j % 2 == 0)
                     {
-                        r[j] = selectedEnt.nodos[i].lDirecciones[a];
+                        r[j] = selectedEnt.nodes[i].directions[a];
                         a++;
                     }
                     else
                     {
-                        r[j] = selectedEnt.nodos[i].iDatos[d];
+                        r[j] = selectedEnt.nodes[i].dataL[d];
                         d++;
                     }
                     j++;
@@ -1178,311 +1187,318 @@ namespace DataDictionary
 
         }
         //MÉTODO QUE BUSCA QUE EL NODO HOJA EN QUE SE ENCUENTRA LA CLAVE QUE SE DESEA ELIMINAR
-        private Nodo buscaNodoHoja(long Direccion)
+        private Node searchLeafNode(long Direccion)
         {
-
-            Nodo nh = new Nodo();
-            for (int Rr = 0; Rr < selectedEnt.nodos.Count; Rr++)//Recorrido de la raiz en busca del dato en las hojas
-                if (selectedEnt.nodos[Rr].lDireccionN == Direccion)
-                    nh = selectedEnt.nodos[Rr];
+            Node nh = new Node();
+            for (int Rr = 0; Rr < selectedEnt.nodes.Count; Rr++)//Recorrido de la raiz en busca del dato en las hojas
+                if (selectedEnt.nodes[Rr].nodeDir == Direccion)
+                    nh = selectedEnt.nodes[Rr];
             return nh;
         }
         //MÉTODO PARA ELIMINAR UNA CLAVE DEL ARBOL
-        private void EliminarClave(BinaryWriter w, int clave, long dir)
+        private void deleteKey(BinaryWriter w, int clave, long dir)
         {
 
-            Nodo nE = new Nodo();
-            Nodo nDer = null;
-            Nodo nIzq = null;
-            Nodo nDeri = null;
-            Nodo nIzqi = null;
-            Nodo nAnterior = new Nodo();
-            foreach (Nodo n in selectedEnt.nodos)
+            Node nE = new Node();
+            Node nRight = null;
+            Node nLeft = null;
+            Node interRight = null;
+            Node interLeft = null;
+            Node prevNode = new Node();
+            foreach (Node n in selectedEnt.nodes)
             {
-                if (n.cTipo == 'R')
-                    Raiz = n;
+                if (n.type == 'R')
+                    Root = n;
             }
-            if (Raiz == null)
+            if (Root == null)
             {
-                nE = selectedEnt.nodos[0];
-                for (int e = 0; e < nE.iDatos.Count; e++)
+                nE = selectedEnt.nodes[0];
+                for (int e = 0; e < nE.dataL.Count; e++)
                 {
-                    if (nE.iDatos[e] == clave)
+                    if (nE.dataL[e] == clave)
                     {
-                        nE.iDatos.RemoveAt(e);
-                        nE.lDirecciones.RemoveAt(e);
+                        nE.dataL.RemoveAt(e);
+                        nE.directions.RemoveAt(e);
                         idxFile.writeNode(nE, w);
-                        selectedEnt.nodos[0] = nE;
-                        if (nE.iDatos.Count == 0)
+                        selectedEnt.nodes[0] = nE;
+                        if (nE.dataL.Count == 0)
                         {
-                            selectedEnt.attributes[indArbol].indexDir = -1;
-                            ddFile.modifyAttribute(selectedEnt.attributes[indArbol].attributeDir, selectedEnt.attributes[indArbol]);
+                            selectedEnt.attributes[indTree].indexDir = -1;
+                            ddFile.modifyAttribute(selectedEnt.attributes[indTree].attributeDir, selectedEnt.attributes[indTree]);
                         }
                     }
                 }
             }
             else
             {
-                RecorreNodos(ref nE, ref nDer, ref nIzq, clave, Raiz);
-                if (nE.cTipo != 'I')
-                    nAnterior = Raiz;
+                goThroughNodes(ref nE, ref nRight, ref nLeft, clave, Root);
+                if (nE.type != 'I')
+                    prevNode = Root;
             }
-            if (nE.cTipo == 'I')
+            if (nE.type == 'I')
             {
-                nAnterior = nE;
-                nDeri = nDer;
-                nIzqi = nIzq;
-                indNInterElim = indNodoEliminar;
-                RecorreNodos(ref nE, ref nDer, ref nIzq, clave, nE);
+                prevNode = nE;
+                interRight = nRight;
+                interLeft = nLeft;
+                indNInterElim = indDeleteNode;
+                goThroughNodes(ref nE, ref nRight, ref nLeft, clave, nE);
             }
 
 
             //ELIMNINACIÓN DE CLAVES
-            if (Raiz != null)
+            if (Root != null)
             {
-                for (int ln = 0; ln < nE.iDatos.Count; ln++)
-                    if (nE.iDatos[ln] == clave)
+                for (int ln = 0; ln < nE.dataL.Count; ln++)
+                    if (nE.dataL[ln] == clave)
                     {
-                        nE.iDatos.RemoveAt(ln);
-                        nE.lDirecciones.RemoveAt(ln);
+                        nE.dataL.RemoveAt(ln);
+                        nE.directions.RemoveAt(ln);
                         idxFile.writeNode(nE, w);
-                        for (int c = 0; c < selectedEnt.nodos.Count; c++)
-                            if (selectedEnt.nodos[c].lDireccionN == nE.lDireccionN)
-                                selectedEnt.nodos[c] = nE;
+                        for (int c = 0; c < selectedEnt.nodes.Count; c++)
+                            if (selectedEnt.nodes[c].nodeDir == nE.nodeDir)
+                                selectedEnt.nodes[c] = nE;
                     }
-                if (nE.iDatos.Count < 2)//si quedó insuficiente 
+                if (nE.dataL.Count < 2)//si quedó insuficiente 
                 {
 
-                    if (nIzq != null)//si tiene izquiero
+                    if (nLeft != null)//si tiene izquierdo
                     {
-                        if (nIzq.iDatos.Count > 2)
-                            DonaclaveIzq(ref nE, ref nIzq, ref nAnterior, ref nIzqi, ref nDeri, indNodoEliminar, indNInterElim, w);
+                        if (nLeft.dataL.Count > 2)
+                            borrowKeyLeft(ref nE, ref nLeft, ref prevNode, ref interLeft, ref interRight, indDeleteNode, indNInterElim, w);
                         else
-                            UneNdConNdIzq(ref nE, ref nIzq, ref nDer, ref nAnterior, ref nIzqi, ref nDeri, indNodoEliminar, indNInterElim, w);
+                            mergeNodeLeft(ref nE, ref nLeft, ref nRight, ref prevNode, ref interLeft, ref interRight, indDeleteNode, indNInterElim, w);
                     }
                     else//Derecho
                     {
-                        if (nDer.iDatos.Count > 2)
-                            DonaclaveDer(ref nE, ref nDer, ref nAnterior, ref nIzqi, ref nDeri, indNodoEliminar, indNInterElim, w);
+                        if (nRight.dataL.Count > 2)
+                            borrowKeyRight(ref nE, ref nRight, ref prevNode, ref interLeft, ref interRight, indDeleteNode, indNInterElim, w);
                         else//fusion con derecho
-                            UneNdConNdDer(ref nE, ref nDer, ref nIzq, ref nAnterior, ref nIzqi, ref nDeri, indNodoEliminar, indNInterElim, w);
+                            mergeNodeRight(ref nE, ref nRight, ref nLeft, ref prevNode, ref interLeft, ref interRight, indDeleteNode, indNInterElim, w);
                     }
                 }
 
-                if (Raiz.iDatos.Count == 0)
+                if (Root.dataL.Count == 0)
                 {
-                    long posi = Raiz.lDirecciones[0];
-                    for (int ln = 0; ln < selectedEnt.nodos.Count; ln++)
-                        if (selectedEnt.nodos[ln].lDireccionN == Raiz.lDireccionN)
-                            selectedEnt.nodos.RemoveAt(ln);
-                    Raiz = null;
+                    long posi = Root.directions[0];
+                    for (int ln = 0; ln < selectedEnt.nodes.Count; ln++)
+                        if (selectedEnt.nodes[ln].nodeDir == Root.nodeDir)
+                            selectedEnt.nodes.RemoveAt(ln);
+                    Root = null;
                 }
             }
         }
         //MÉTODO PARA DONAR UN DATO SI EL NODO SE QUEDA  SIN CLAVES SUFICIENTES
-        private void DonaclaveIzq(ref Nodo nE, ref Nodo nIzq, ref Nodo nAnterior, ref Nodo nIzqi, ref Nodo nDeri, int indNelim, int indNelimInter, BinaryWriter w)
+        private void borrowKeyLeft(ref Node nE, ref Node nLeft, ref Node prevNode, ref Node interLeft, ref Node interRight, int indDelNode, int indDelInter, BinaryWriter w)
         {
-            nE.iDatos.Add(nIzq.iDatos[nIzq.iDatos.Count - 1]);
-            nE.lDirecciones.Add(nIzq.lDirecciones[nIzq.iDatos.Count - 1]);
-            ordenaNodo(nE);
-            nIzq.iDatos.RemoveAt(nIzq.iDatos.Count - 1);
-            nIzq.lDirecciones.RemoveAt(nIzq.iDatos.Count - 1);
-            idxFile.writeNode(nIzq, w);
-            nAnterior.iDatos[indNelim] = nE.iDatos[0];
-            for (int c = 0; c < selectedEnt.nodos.Count; c++)
-                if (selectedEnt.nodos[c].lDireccionN == nAnterior.lDireccionN)
-                    selectedEnt.nodos[c] = nAnterior;
-            idxFile.writeNode(nAnterior, w);
+            nE.dataL.Add(nLeft.dataL[nLeft.dataL.Count - 1]);
+            nE.directions.Add(nLeft.directions[nLeft.dataL.Count - 1]);
+            sortNodes(nE);
+            nLeft.dataL.RemoveAt(nLeft.dataL.Count - 1);
+            nLeft.directions.RemoveAt(nLeft.dataL.Count - 1);
+            idxFile.writeNode(nLeft, w);
+            prevNode.dataL[indDelNode] = nE.dataL[0];
+
+            for (int c = 0; c < selectedEnt.nodes.Count; c++)
+                if (selectedEnt.nodes[c].nodeDir == prevNode.nodeDir)
+                    selectedEnt.nodes[c] = prevNode;
+
+            idxFile.writeNode(prevNode, w);
             idxFile.writeNode(nE, w);
-            for (int c = 0; c < selectedEnt.nodos.Count; c++)
-                if (selectedEnt.nodos[c].lDireccionN == nE.lDireccionN)
-                    selectedEnt.nodos[c] = nE;
+
+            for (int c = 0; c < selectedEnt.nodes.Count; c++)
+                if (selectedEnt.nodes[c].nodeDir == nE.nodeDir)
+                    selectedEnt.nodes[c] = nE;
         }
         //MÉTODO PARA DONAR UN DATO SI EL NODO SE QUEDA  SIN CLAVES SUFICIENTES
-        private void DonaclaveDer(ref Nodo nE, ref Nodo nDer, ref Nodo nAnterior, ref Nodo nIzqi, ref Nodo nDeri, int indNelim, int indNelimInter, BinaryWriter w)
+        private void borrowKeyRight(ref Node nE, ref Node nRight, ref Node prevNode, ref Node interLeft, ref Node interRight, int indDelNode, int indDelInter, BinaryWriter w)
         {
-            nE.iDatos.Add(nDer.iDatos[0]);
-            nE.lDirecciones.Add(nDer.lDirecciones[0]);
-            nDer.iDatos.RemoveAt(0);
-            nDer.lDirecciones.RemoveAt(0);
-            idxFile.writeNode(nDer, w);
-            nAnterior.iDatos[indNelim] = nDer.iDatos[0];
-            for (int c = 0; c < selectedEnt.nodos.Count; c++)
-                if (selectedEnt.nodos[c].lDireccionN == nAnterior.lDireccionN)
-                    selectedEnt.nodos[c] = nAnterior;
-            idxFile.writeNode(nAnterior, w);
+            nE.dataL.Add(nRight.dataL[0]);
+            nE.directions.Add(nRight.directions[0]);
+            nRight.dataL.RemoveAt(0);
+            nRight.directions.RemoveAt(0);
+            idxFile.writeNode(nRight, w);
+            prevNode.dataL[indDelNode] = nRight.dataL[0];
+
+            for (int c = 0; c < selectedEnt.nodes.Count; c++)
+                if (selectedEnt.nodes[c].nodeDir == prevNode.nodeDir)
+                    selectedEnt.nodes[c] = prevNode;
+
+            idxFile.writeNode(prevNode, w);
             idxFile.writeNode(nE, w);
-            for (int c = 0; c < selectedEnt.nodos.Count; c++)
-                if (selectedEnt.nodos[c].lDireccionN == nE.lDireccionN)
-                    selectedEnt.nodos[c] = nE;
+
+            for (int c = 0; c < selectedEnt.nodes.Count; c++)
+                if (selectedEnt.nodes[c].nodeDir == nE.nodeDir)
+                    selectedEnt.nodes[c] = nE;
         }
         //EN CASO DE QUE EL NODO NO PUEDA DONAR UNA CLAVE ESTE SE UNIRA CON EL NODO QUE ESTA PIDIENDO PRESTADO
-        private void UneNdConNdIzq(ref Nodo nE, ref Nodo nIzq, ref Nodo nDer, ref Nodo nAnterior, ref Nodo nIzqi, ref Nodo nDeri, int indNelim, int indNelimInter, BinaryWriter w)
+        private void mergeNodeLeft(ref Node nE, ref Node nLeft, ref Node nRight, ref Node prevNode, ref Node interLeft, ref Node interRight, int indDelNode, int indDelInter, BinaryWriter w)
         {
-            if (nE.cTipo == 'I')
+            if (nE.type == 'I')
             {
-                nIzq.iDatos.Add(nAnterior.iDatos[indNelim]);
-                nIzq.lDirecciones.Add(nE.lDirecciones[0]);
-                nIzq.iDatos.Add(nE.iDatos[0]);
-                nIzq.lDirecciones.Add(nE.lDirecciones[1]);
+                nLeft.dataL.Add(prevNode.dataL[indDelNode]);
+                nLeft.directions.Add(nE.directions[0]);
+                nLeft.dataL.Add(nE.dataL[0]);
+                nLeft.directions.Add(nE.directions[1]);
             }
-            if (nE.cTipo == 'H')
+            if (nE.type == 'H')
             {
-                nIzq.lDirecciones.Add(nE.lDirecciones[0]);
-                nIzq.iDatos.Add(nE.iDatos[0]);
+                nLeft.directions.Add(nE.directions[0]);
+                nLeft.dataL.Add(nE.dataL[0]);
             }
-            idxFile.writeNode(nIzq, w);
+            idxFile.writeNode(nLeft, w);
             int datEliminado = 0;
-            nAnterior.iDatos.RemoveAt(indNelim);
-            nAnterior.lDirecciones.RemoveAt(indNelim + 1);
-            idxFile.writeNode(nAnterior, w);
+            prevNode.dataL.RemoveAt(indDelNode);
+            prevNode.directions.RemoveAt(indDelNode + 1);
+            idxFile.writeNode(prevNode, w);
             int ln = 0;
-            for (; ln < selectedEnt.nodos.Count; ln++)
+            for (; ln < selectedEnt.nodes.Count; ln++)
             {
-                if (nIzq.lDireccionN == selectedEnt.nodos[ln].lDireccionN)
-                    selectedEnt.nodos[ln] = nIzq;
-                if (nAnterior.lDireccionN == selectedEnt.nodos[ln].lDireccionN)
-                    selectedEnt.nodos[ln] = nAnterior;
-                if (nE.lDireccionN == selectedEnt.nodos[ln].lDireccionN)
+                if (nLeft.nodeDir == selectedEnt.nodes[ln].nodeDir)
+                    selectedEnt.nodes[ln] = nLeft;
+                if (prevNode.nodeDir == selectedEnt.nodes[ln].nodeDir)
+                    selectedEnt.nodes[ln] = prevNode;
+                if (nE.nodeDir == selectedEnt.nodes[ln].nodeDir)
                     datEliminado = ln;
             }
-            selectedEnt.nodos.RemoveAt(datEliminado);
-            if (nAnterior.cTipo == 'I')
-                EliminarIntermedios(ref nAnterior, ref nDer, ref nIzq, ref nAnterior, ref nIzqi, ref nDeri, indNelimInter, w);
+            selectedEnt.nodes.RemoveAt(datEliminado);
+            if (prevNode.type == 'I')
+                deleteInter(ref prevNode, ref nRight, ref nLeft, ref prevNode, ref interLeft, ref interRight, indDelInter, w);
         }
         //EN CASO DE QUE EL NODO NO PUEDA DONAR UNA CLAVE ESTE SE UNIRA CON EL NODO QUE ESTA PIDIENDO PRESTADO
-        private void UneNdConNdDer(ref Nodo nE, ref Nodo nDer, ref Nodo nIzq, ref Nodo nAnterior, ref Nodo nIzqi, ref Nodo nDeri, int indNelim, int indNelimInter, BinaryWriter w)
+        private void mergeNodeRight(ref Node nE, ref Node nRight, ref Node nLeft, ref Node prevNode, ref Node interLeft, ref Node interRight, int indDelNode, int indDelInter, BinaryWriter w)
         {
-            if (nE.cTipo == 'I')
+            if (nE.type == 'I')
             {
-                nE.iDatos.Add(nAnterior.iDatos[indNelim]);
-                nE.lDirecciones.Add(nDer.lDirecciones[0]);
-                for (int n = 0; n < nDer.iDatos.Count; n++)
+                nE.dataL.Add(prevNode.dataL[indDelNode]);
+                nE.directions.Add(nRight.directions[0]);
+                for (int n = 0; n < nRight.dataL.Count; n++)
                 {
-                    nE.iDatos.Add(nDer.iDatos[n]);
-                    nE.lDirecciones.Add(nDer.lDirecciones[n + 1]);
+                    nE.dataL.Add(nRight.dataL[n]);
+                    nE.directions.Add(nRight.directions[n + 1]);
                 }
             }
-            if (nE.cTipo == 'H')
+            if (nE.type == 'H')
             {
-                for (int n = 0; n < nDer.iDatos.Count; n++)
+                for (int n = 0; n < nRight.dataL.Count; n++)
                 {
-                    nE.iDatos.Add(nDer.iDatos[n]);
-                    nE.lDirecciones.Add(nDer.lDirecciones[n]);
+                    nE.dataL.Add(nRight.dataL[n]);
+                    nE.directions.Add(nRight.directions[n]);
                 }
             }
 
-            int datEliminado = 0;
-            nAnterior.iDatos.RemoveAt(indNelim);
-            nAnterior.lDirecciones.RemoveAt(indNelim + 1);
-            for (int ln = 0; ln < selectedEnt.nodos.Count; ln++)
+            int keyDeleted = 0;
+            prevNode.dataL.RemoveAt(indDelNode);
+            prevNode.directions.RemoveAt(indDelNode + 1);
+            for (int ln = 0; ln < selectedEnt.nodes.Count; ln++)
             {
-                if (nE.lDireccionN == selectedEnt.nodos[ln].lDireccionN)
-                    selectedEnt.nodos[ln] = nE;
-                if (nAnterior.lDireccionN == selectedEnt.nodos[ln].lDireccionN)
-                    selectedEnt.nodos[ln] = nAnterior;
-                if (nDer.lDireccionN == selectedEnt.nodos[ln].lDireccionN)
-                    datEliminado = ln;
+                if (nE.nodeDir == selectedEnt.nodes[ln].nodeDir)
+                    selectedEnt.nodes[ln] = nE;
+                if (prevNode.nodeDir == selectedEnt.nodes[ln].nodeDir)
+                    selectedEnt.nodes[ln] = prevNode;
+                if (nRight.nodeDir == selectedEnt.nodes[ln].nodeDir)
+                    keyDeleted = ln;
             }
-            selectedEnt.nodos.RemoveAt(datEliminado);
-            if (nAnterior.cTipo == 'I')
-                EliminarIntermedios(ref nAnterior, ref nDer, ref nIzq, ref nAnterior, ref nIzqi, ref nDeri, indNelimInter, w);
+
+            selectedEnt.nodes.RemoveAt(keyDeleted);
+
+            if (prevNode.type == 'I')
+                deleteInter(ref prevNode, ref nRight, ref nLeft, ref prevNode, ref interLeft, ref interRight, indDelInter, w);
         }
         //RECORRIDO DE LOS NODOS PARA ENCONTRAR EN DONDE SE ENCUENTRA LA CLAVE QUE SE QUIERE ELIMINAR
-        private void RecorreNodos(ref Nodo nE, ref Nodo nDer, ref Nodo nIzq, int clave, Nodo nD)
+        private void goThroughNodes(ref Node nE, ref Node nRight, ref Node nLeft, int key, Node nD)
         {
-            for (int rn = 0; rn < nD.iDatos.Count; rn++)//Recorrido de la raiz para saber en que nodo se encuentra el dato que se quiere eliminar
+            for (int rn = 0; rn < nD.dataL.Count; rn++)//Recorrido de la raiz para saber en que nodo se encuentra el dato que se quiere eliminar
             {
-                if (clave < nD.iDatos[rn])
+                if (key < nD.dataL[rn])
                 {
-                    for (int ln = 0; ln < selectedEnt.nodos.Count; ln++)
+                    for (int ln = 0; ln < selectedEnt.nodes.Count; ln++)
                     {
-                        if (nD.lDirecciones[rn] == selectedEnt.nodos[ln].lDireccionN)
+                        if (nD.directions[rn] == selectedEnt.nodes[ln].nodeDir)
                         {
-                            nE = buscaNodoHoja(nD.lDirecciones[rn]);
-                            indNodoEliminar = rn;
+                            nE = searchLeafNode(nD.directions[rn]);
+                            indDeleteNode = rn;
                         }
-                        if (rn < nD.lDirecciones.Count - 1)
+                        if (rn < nD.directions.Count - 1)
                         {
-                            if (selectedEnt.nodos[ln].lDireccionN == nD.lDirecciones[rn + 1])
-                                nDer = buscaNodoHoja(nD.lDirecciones[rn + 1]);
-                            nIzq = null;
+                            if (selectedEnt.nodes[ln].nodeDir == nD.directions[rn + 1])
+                                nRight = searchLeafNode(nD.directions[rn + 1]);
+                            nLeft = null;
                         }
-                        if (rn == nD.lDirecciones.Count - 1)
+                        if (rn == nD.directions.Count - 1)
                         {
-                            if (selectedEnt.nodos[ln].lDireccionN == nD.lDirecciones[rn - 1])
-                                nIzq = buscaNodoHoja(nD.lDirecciones[rn - 1]);
-                            //indNodoEliminar = rn - 1;
+                            if (selectedEnt.nodes[ln].nodeDir == nD.directions[rn - 1])
+                                nLeft = searchLeafNode(nD.directions[rn - 1]);
+                            //indDeleteNode = rn - 1;
                         }
                     }
-                    rn = selectedEnt.nodos.Count;
+                    rn = selectedEnt.nodes.Count;
                 }
                 else
                 {
-                    for (int ln = 0; ln < selectedEnt.nodos.Count; ln++)
+                    for (int ln = 0; ln < selectedEnt.nodes.Count; ln++)
                     {
-                        if (nD.lDirecciones[rn + 1] == selectedEnt.nodos[ln].lDireccionN)
+                        if (nD.directions[rn + 1] == selectedEnt.nodes[ln].nodeDir)
                         {
-                            nE = buscaNodoHoja(nD.lDirecciones[rn + 1]);
-                            indNodoEliminar = rn;
+                            nE = searchLeafNode(nD.directions[rn + 1]);
+                            indDeleteNode = rn;
                         }
-                        if ((rn + 1) < nD.lDirecciones.Count - 1)
+                        if ((rn + 1) < nD.directions.Count - 1)
                         {
-                            if (selectedEnt.nodos[ln].lDireccionN == nD.lDirecciones[rn + 2])
-                                nDer = buscaNodoHoja(nD.lDirecciones[rn + 2]);
-                            // indNodoEliminar = rn + 1;
+                            if (selectedEnt.nodes[ln].nodeDir == nD.directions[rn + 2])
+                                nRight = searchLeafNode(nD.directions[rn + 2]);
+                            // indDeleteNode = rn + 1;
                         }
 
-                        if ((rn + 1) == nD.lDirecciones.Count - 1)
+                        if ((rn + 1) == nD.directions.Count - 1)
                         {
-                            if (selectedEnt.nodos[ln].lDireccionN == nD.lDirecciones[rn])
-                                nIzq = buscaNodoHoja(nD.lDirecciones[rn]);
-                            nDer = null;
+                            if (selectedEnt.nodes[ln].nodeDir == nD.directions[rn])
+                                nLeft = searchLeafNode(nD.directions[rn]);
+                            nRight = null;
                         }
                     }
                 }
             }
         }
         //MÉTODO PARA RECORRER Y ELIMINAR INTERMEDIOS EN CASO DE QUE EXISTAN
-        private void EliminarIntermedios(ref Nodo nE, ref Nodo nDer, ref Nodo nIzq, ref Nodo nAnterior, ref Nodo nIzqi, ref Nodo nDeri, int indNelimInter, BinaryWriter w)
+        private void deleteInter(ref Node nE, ref Node nRight, ref Node nLeft, ref Node prevNode, ref Node interLeft, ref Node interRight, int indDelInter, BinaryWriter w)
         {
-            if (nE.lDireccionN != Raiz.lDireccionN)
+            if (nE.nodeDir != Root.nodeDir)
             {
-                if (nE.iDatos.Count < 2)
+                if (nE.dataL.Count < 2)
                 {
-                    if (nIzqi != null)
+                    if (interLeft != null)
                     {
-                        if (nIzqi.iDatos.Count > 2)
-                            DonaclaveIzq(ref nE, ref nIzqi, ref nAnterior, ref nDer, ref nDeri, indNelimInter, 0, w);
+                        if (interLeft.dataL.Count > 2)
+                            borrowKeyLeft(ref nE, ref interLeft, ref prevNode, ref nRight, ref interRight, indDelInter, 0, w);
                         else
-                            UneNdConNdIzq(ref nE, ref nIzqi, ref nDer, ref Raiz, ref nDer, ref nDeri, indNelimInter, 0, w);
+                            mergeNodeLeft(ref nE, ref interLeft, ref nRight, ref Root, ref nRight, ref interRight, indDelInter, 0, w);
 
                     }
                     else
                     {
-                        if (nDeri.iDatos.Count > 2)
-                            DonaclaveDer(ref nE, ref nDeri, ref nAnterior, ref nIzq, ref nIzqi, indNelimInter, 0, w);
+                        if (interRight.dataL.Count > 2)
+                            borrowKeyRight(ref nE, ref interRight, ref prevNode, ref nLeft, ref interLeft, indDelInter, 0, w);
                         else
-                            UneNdConNdDer(ref nE, ref nDeri, ref nIzq, ref Raiz, ref nIzq, ref nIzqi, indNelimInter, 0, w);
+                            mergeNodeRight(ref nE, ref interRight, ref nLeft, ref Root, ref nLeft, ref interLeft, indDelInter, 0, w);
                     }
                 }
             }
-            if (Raiz.iDatos.Count == 0)
+            if (Root.dataL.Count == 0)
             {
-                int p = 0; long posi = Raiz.lDirecciones[0];
-                for (int ln = 0; ln < selectedEnt.nodos.Count; ln++)
-                    if (selectedEnt.nodos[ln].lDireccionN == Raiz.lDireccionN)
-                        selectedEnt.nodos.RemoveAt(ln);
-                for (int ln = 0; ln < selectedEnt.nodos.Count; ln++)
-                    if (selectedEnt.nodos[ln].lDireccionN == posi)
+                int p = 0; long posi = Root.directions[0];
+                for (int ln = 0; ln < selectedEnt.nodes.Count; ln++)
+                    if (selectedEnt.nodes[ln].nodeDir == Root.nodeDir)
+                        selectedEnt.nodes.RemoveAt(ln);
+                for (int ln = 0; ln < selectedEnt.nodes.Count; ln++)
+                    if (selectedEnt.nodes[ln].nodeDir == posi)
                     {
-                        selectedEnt.attributes[indArbol].indexDir = selectedEnt.nodos[ln].lDireccionN;
-                        if (selectedEnt.nodos[ln].cTipo == 'I')
+                        selectedEnt.attributes[indTree].indexDir = selectedEnt.nodes[ln].nodeDir;
+                        if (selectedEnt.nodes[ln].type == 'I')
                         {
-                            selectedEnt.nodos[ln].cTipo = 'R';
-                            idxFile.writeNode(selectedEnt.nodos[ln], w);
+                            selectedEnt.nodes[ln].type = 'R';
+                            idxFile.writeNode(selectedEnt.nodes[ln], w);
                         }
-                        ddFile.modifyAttribute(selectedEnt.attributes[indArbol].attributeDir, selectedEnt.attributes[indArbol]);
+                        ddFile.modifyAttribute(selectedEnt.attributes[indTree].attributeDir, selectedEnt.attributes[indTree]);
                     }
             }
         }
@@ -1515,7 +1531,7 @@ namespace DataDictionary
             {
                 file.stream = new FileStream(fileName, FileMode.Open);
                 BinaryWriter writer = new BinaryWriter(file.stream, Encoding.UTF8);
-                string cadena = ""; int num = -1;
+                int num = -1;
                 newData.dataDir = ant.dataDir;
                 newData.nextDir = ant.nextDir;
 
@@ -1581,8 +1597,8 @@ namespace DataDictionary
 
                                 //sordedPKlist = sordedPKlist.OrderBy(lof => lof.oClave).ToList();
                                 sordedPKlist = sordedPKlist.OrderBy(lo => lo.oClave).ToList();
-                                ordenaPk();
-                                idxFile.modificaPk(selectedEnt, indx, write);
+                                sortPK();
+                                idxFile.modifyPK(selectedEnt, indx, write);
                                 llenaDataPk();
                             }
                             idxFile.stream.Close();
@@ -1608,11 +1624,11 @@ namespace DataDictionary
                                     {
                                         if (sortedFKlist[f].oClave.ToString() == selectedEnt.data[ind].number[indFk].ToString())
                                         {
-                                            if (sortedFKlist[f].lDirecciones.Count > 0)
+                                            if (sortedFKlist[f].directions.Count > 0)
                                             {
-                                                for (int d = 0; d < sortedFKlist[f].lDirecciones.Count; d++)
+                                                for (int d = 0; d < sortedFKlist[f].directions.Count; d++)
                                                 {
-                                                    if (sortedFKlist[f].lDirecciones[d] == selectedEnt.data[ind].dataDir)
+                                                    if (sortedFKlist[f].directions[d] == selectedEnt.data[ind].dataDir)
                                                     {
                                                         for (int ifk = 0; ifk < sortedFKlist.Count; ifk++)
                                                         {
@@ -1620,7 +1636,7 @@ namespace DataDictionary
                                                             //if (selectedEnt.data[ind].number[indx].ToString() == sortedFKlist[ifk].oClave.ToString())
                                                             if (newData.number[indFk].ToString() == sortedFKlist[ifk].oClave.ToString())
                                                             {
-                                                                sortedFKlist[ifk].lDirecciones.Add(sortedFKlist[f].lDirecciones[d]);
+                                                                sortedFKlist[ifk].directions.Add(sortedFKlist[f].directions[d]);
                                                                 ifk++;
                                                                 found = true;
                                                             }
@@ -1631,23 +1647,23 @@ namespace DataDictionary
                                                             {
                                                                 fk = new ForeignKey();
                                                                 fk.oClave = DataLLenaRegistros[indFk, 0].Value.ToString();
-                                                                fk.lDirecciones.Add(selectedEnt.data[indice].lDirRegistro);
+                                                                fk.directions.Add(selectedEnt.data[indice].lDirRegistro);
                                                             }*/
                                                             //else
                                                             
                                                                 fk = new ForeignKey();
                                                                 fk.oClave = Convert.ToInt32(newData.number[indFk]);
-                                                                fk.lDirecciones.Add(selectedEnt.data[ind].dataDir);
+                                                                fk.directions.Add(selectedEnt.data[ind].dataDir);
                                                             
                                                             sortedFKlist.Add(fk);
-                                                            sortedFKlist[f].lDirecciones.RemoveAt(d);
-                                                            if (sortedFKlist[f].lDirecciones.Count == 0)
+                                                            sortedFKlist[f].directions.RemoveAt(d);
+                                                            if (sortedFKlist[f].directions.Count == 0)
                                                                 sortedFKlist.RemoveAt(f);
                                                         }
                                                         else
                                                         {
-                                                            sortedFKlist[f].lDirecciones.RemoveAt(d);
-                                                            if (sortedFKlist[f].lDirecciones.Count == 0)
+                                                            sortedFKlist[f].directions.RemoveAt(d);
+                                                            if (sortedFKlist[f].directions.Count == 0)
                                                                 sortedFKlist.RemoveAt(f);
                                                             f--;
                                                         }
@@ -1679,11 +1695,11 @@ namespace DataDictionary
 
                                         if (sortedFKlist[f].oClave.ToString() == compare)
                                         {
-                                            if (sortedFKlist[f].lDirecciones.Count > 0)
+                                            if (sortedFKlist[f].directions.Count > 0)
                                             {
-                                                for (int d = 0; d < sortedFKlist[f].lDirecciones.Count; d++)
+                                                for (int d = 0; d < sortedFKlist[f].directions.Count; d++)
                                                 {
-                                                    if (sortedFKlist[f].lDirecciones[d] == selectedEnt.data[ind].dataDir)
+                                                    if (sortedFKlist[f].directions[d] == selectedEnt.data[ind].dataDir)
                                                     {
                                                         for (int ifk = 0; ifk < sortedFKlist.Count; ifk++)
                                                         {
@@ -1698,7 +1714,7 @@ namespace DataDictionary
 
                                                             if (compare2 == sortedFKlist[ifk].oClave.ToString())
                                                             {
-                                                                sortedFKlist[ifk].lDirecciones.Add(sortedFKlist[f].lDirecciones[d]);
+                                                                sortedFKlist[ifk].directions.Add(sortedFKlist[f].directions[d]);
                                                                 ifk++;
                                                                 found = true;
                                                             }
@@ -1709,7 +1725,7 @@ namespace DataDictionary
                                                             {
                                                                 fk = new ForeignKey();
                                                                 fk.oClave = DataLLenaRegistros[indFk, 0].Value.ToString();
-                                                                fk.lDirecciones.Add(selectedEnt.data[indice].lDirRegistro);
+                                                                fk.directions.Add(selectedEnt.data[indice].lDirRegistro);
                                                             }*/
                                                             //else
                                                             {
@@ -1718,17 +1734,17 @@ namespace DataDictionary
                                                                     fk.oClave = new string(newData.str[indFk - 1]);
                                                                 else
                                                                     fk.oClave = new string(newData.str[indFk]);
-                                                                fk.lDirecciones.Add(selectedEnt.data[ind].dataDir);
+                                                                fk.directions.Add(selectedEnt.data[ind].dataDir);
                                                             }
                                                             sortedFKlist.Add(fk);
-                                                            sortedFKlist[f].lDirecciones.RemoveAt(d);
-                                                            if (sortedFKlist[f].lDirecciones.Count == 0)
+                                                            sortedFKlist[f].directions.RemoveAt(d);
+                                                            if (sortedFKlist[f].directions.Count == 0)
                                                                 sortedFKlist.RemoveAt(f);
                                                         }
                                                         else
                                                         {
-                                                            sortedFKlist[f].lDirecciones.RemoveAt(d);
-                                                            if (sortedFKlist[f].lDirecciones.Count == 0)
+                                                            sortedFKlist[f].directions.RemoveAt(d);
+                                                            if (sortedFKlist[f].directions.Count == 0)
                                                                 sortedFKlist.RemoveAt(f);
                                                             f--;
                                                         }
@@ -1771,22 +1787,22 @@ namespace DataDictionary
                                         else
                                             fk.oClave = new string(data.str[indFk]);
                                     }
-                                    fk.lDirecciones.Add(data.dataDir);
+                                    fk.directions.Add(data.dataDir);
                                     sortedFKlist.Add(fk);
                                     sortedFKlist = sortedFKlist.OrderBy(lof => lof.oClave).ToList();
-                                    ordenaFk();
-                                    idxFile.ModificaFk(selectedEnt, indFk, write);
+                                    sortFK();
+                                    idxFile.modifyFK(selectedEnt, indFk, write);
 
                                 }
                                 else
                                 {
-                                    ordenaFk();
-                                    idxFile.ModificaFk(selectedEnt, indFk, write);
+                                    sortFK();
+                                    idxFile.modifyFK(selectedEnt, indFk, write);
                                 }*/
                                 sortedFKlist = sortedFKlist.OrderBy(lof => lof.oClave).ToList();
-                                ordenaFk();
-                                llenaDataFk();
-                                idxFile.ModificaFk(selectedEnt, indFk, write);
+                                sortFK();
+                                fillDataFK();
+                                idxFile.modifyFK(selectedEnt, indFk, write);
                             }
                             idxFile.stream.Close();
                             write.Close();
@@ -1797,14 +1813,21 @@ namespace DataDictionary
                             if (idxFile.stream != null)
                                 idxFile.stream.Close();
 
+                            if (isPk && !isFk)
+                                idxFile.stream.Position = advance;
+                            else if (isPk && isFk)
+                                idxFile.stream.Position = advance + advanceFK;
+                            else if (isFk && !isPk)
+                                idxFile.stream.Position = advanceFK;
+
                             idxFile.stream = new FileStream(idxFileName, FileMode.Open);
                             BinaryWriter write = new BinaryWriter(idxFile.stream, Encoding.UTF8);
 
                             if (isTree)
                             {
-                                EliminarClave(write, Convert.ToInt32(selectedEnt.data[ind].number[indArbol]), selectedEnt.data[ind].dataDir);
-                                InsertaClave(write, Convert.ToInt32(newData.number[indArbol]), newData.dataDir);
-                                llenaDataGridArbol();
+                                deleteKey(write, Convert.ToInt32(selectedEnt.data[ind].number[indTree]), selectedEnt.data[ind].dataDir);
+                                insertKey(write, Convert.ToInt32(newData.number[indTree]), newData.dataDir);
+                                fillDataGridTree();
                             }
 
                             idxFile.stream.Close();
@@ -1878,9 +1901,9 @@ namespace DataDictionary
                         }
                     }
                 }
-                ordenaPk();
+                sortPK();
                 llenaDataPk();
-                idxFile.modificaPk(selectedEnt, ind, writerIdx);
+                idxFile.modifyPK(selectedEnt, ind, writerIdx);
             }
             if (isFk)
             {
@@ -1888,12 +1911,12 @@ namespace DataDictionary
                 {
                     for (int f = 0; f < sortedFKlist.Count; f++)
                     {
-                        for (int fd = 0; fd < sortedFKlist[f].lDirecciones.Count; fd++)
+                        for (int fd = 0; fd < sortedFKlist[f].directions.Count; fd++)
                         {
-                            if (sortedFKlist[f].lDirecciones[fd] == selectedEnt.data[indice].dataDir)
+                            if (sortedFKlist[f].directions[fd] == selectedEnt.data[indice].dataDir)
                             {
-                                sortedFKlist[f].lDirecciones.RemoveAt(fd);
-                                if (sortedFKlist[f].lDirecciones.Count == 0)
+                                sortedFKlist[f].directions.RemoveAt(fd);
+                                if (sortedFKlist[f].directions.Count == 0)
                                 {
                                     sortedFKlist.RemoveAt(f);
                                     if (sortedFKlist.Count > 1)
@@ -1905,18 +1928,21 @@ namespace DataDictionary
                         }
                     }
                 }
-                ordenaFk();
-                llenaDataFk();
-                idxFile.ModificaFk(selectedEnt, indFk, writerIdx);
+                sortFK();
+                fillDataFK();
+                idxFile.modifyFK(selectedEnt, indFk, writerIdx);
             }
+
             if (isTree)
             {
-                EliminarClave(writerIdx, Convert.ToInt32(selectedEnt.data[indice].number[indArbol]), selectedEnt.data[indice].dataDir);
-                llenaDataGridArbol();
+                deleteKey(writerIdx, Convert.ToInt32(selectedEnt.data[indice].number[indTree]), selectedEnt.data[indice].dataDir);
+                fillDataGridTree();
             }
+
             selectedEnt.data.RemoveAt(indice);
-            verificaClaveDeBusqueda();
-            CambiaDirecciones();
+            verifySearchKey();
+            changeDirections();
+
             /*if (selectedEnt.data.Count != 0)
                 selectedEnt.dataDir = selectedEnt.data[0].dataDir;
             else
@@ -1932,14 +1958,12 @@ namespace DataDictionary
             writer.Close();
             writerDat.Close();
             writerIdx.Close();
-            //file.modificaRegistros(selectedEnt);
-            
-            //ddFile.modificaEntidad(selectedEnt);
+
 
             showData(selectedEnt.data);
         }
 
-        private void CambiaDirecciones()
+        private void changeDirections()
         {
             for (int i = 0; i < selectedEnt.data.Count; i++)
             {
@@ -1954,7 +1978,7 @@ namespace DataDictionary
             }
         }
 
-        private void verificaClaveDeBusqueda()
+        private void verifySearchKey()
         {
             for (int i = 0; i < selectedEnt.attributes.Count; i++)
             {
@@ -1967,48 +1991,7 @@ namespace DataDictionary
                 }
             }
         }
-        /*
-        Data auxData = new Data();
-        long ap = Convert.ToInt64(dataGridView1.Rows[dataGridView1.CurrentCell.RowIndex].Cells[0].Value);
-        bool b = false;
-
-        int i = 0, ind = 0;
-        foreach (Data d in selectedEnt.data)
-        {
-            if (d.dataDir == ap)
-            { auxData = d; b = true; ind = i; }
-            i++;
-        }
-        if (b)
-        {
-            file.stream = new FileStream(fileName, FileMode.Open);
-            BinaryWriter writer = new BinaryWriter(file.stream, Encoding.UTF8);
-            ddFile.stream = new FileStream(ddFile.fileName, FileMode.Open);
-            BinaryWriter writerDat = new BinaryWriter(ddFile.stream, Encoding.UTF8);
-            //EliminaRegistro(auxReg, ind); //Elimina registro
-            if (selectedEnt.dataDir == auxData.dataDir)//Si es el primer registro 
-            {
-                selectedEnt.dataDir = auxData.nextDir;//Cambia direccion de los datos  de la entidad
-                file.stream.Position = selectedEnt.entityDir;
-                selectedEnt.SaveEntity(file.stream, writer);//Escribe la entidad en el archivo
-            }
-            else//Si el regitro no fue el primero 
-            {
-                selectedEnt.data[ind - 1].nextDir = auxData.nextDir;//Se crea un anterior y se asigna el dato 
-                file.stream.Position = selectedEnt.data[ind - 1].dataDir;
-                selectedEnt.data[ind - 1].saveData(file.stream, writer, selectedEnt.attributes);//Escribe registro en el archivo
-            }
-
-            selectedEnt.data.RemoveAt(ind);
-            dataGridView1.Rows.Clear();
-
-            selectedEnt.SaveEntity2(writerDat);
-            showData(selectedEnt.data);
-            file.stream.Close();
-            MessageBox.Show("Data Deleted");
-        }
-        else
-            MessageBox.Show("NO Data to Delete");*/
+        
 
 
         private char[] stringToCharArray(string cad, int num)
@@ -2175,8 +2158,8 @@ namespace DataDictionary
                             pk.lDireccion = data.dataDir;
                             sordedPKlist.Add(pk);
                             sordedPKlist = sordedPKlist.OrderBy(lo => lo.oClave).ToList();
-                            ordenaPk();
-                            idxFile.modificaPk(selectedEnt, ind, write);
+                            sortPK();
+                            idxFile.modifyPK(selectedEnt, ind, write);
                             llenaDataPk();
                         }
                         idxFile.stream.Close();
@@ -2194,7 +2177,7 @@ namespace DataDictionary
                         BinaryWriter write = new BinaryWriter(idxFile.stream, Encoding.UTF8);
                         if (isFk || selectedEnt.fk.Count > 0)
                         {
-                            if (!busca(selectedEnt.attributes[indFk].type))
+                            if (!searchFK(selectedEnt.attributes[indFk].type))
                             {
                                 fk = new ForeignKey();
 
@@ -2214,19 +2197,19 @@ namespace DataDictionary
                                     else if(isPk && isSK)
                                         fk.oClave = new string(data.str[indFk - 2]);
                                 }
-                                fk.lDirecciones.Add(data.dataDir);
+                                fk.directions.Add(data.dataDir);
                                 sortedFKlist.Add(fk);
                                 sortedFKlist = sortedFKlist.OrderBy(lof => lof.oClave).ToList();
-                                ordenaFk();
-                                idxFile.ModificaFk(selectedEnt, indFk, write);
+                                sortFK();
+                                idxFile.modifyFK(selectedEnt, indFk, write);
 
                             }
                             else
                             {
-                                ordenaFk();
-                                idxFile.ModificaFk(selectedEnt, indFk, write);
+                                sortFK();
+                                idxFile.modifyFK(selectedEnt, indFk, write);
                             }
-                            llenaDataFk();
+                            fillDataFK();
                         }
                         idxFile.stream.Close();
                         write.Close();
@@ -2237,22 +2220,23 @@ namespace DataDictionary
                             idxFile.stream.Close();
                         idxFile.stream = new FileStream(idxFileName, FileMode.Open);
 
-                        if (isPk)
+                        if (isPk && !isFk)
                             idxFile.stream.Position = advance;
+                        else if (isPk && isFk)
+                            idxFile.stream.Position = advance + advanceFK;
+                        else if (isFk && !isPk)
+                            idxFile.stream.Position = advanceFK;
 
                         BinaryWriter write = new BinaryWriter(idxFile.stream, Encoding.UTF8);
 
                         if (isTree)
                         {
-                            InsertaClave(write, Convert.ToInt32(data.number[indArbol]), data.dataDir);
-                            llenaDataGridArbol();
+                            insertKey(write, Convert.ToInt32(data.number[indTree]), data.dataDir);
+                            fillDataGridTree();
                         }
                         idxFile.stream.Close();
 
                     }
-                    
-                    
-
                 }
             }
 

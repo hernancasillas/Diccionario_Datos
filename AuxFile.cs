@@ -270,7 +270,7 @@ namespace DataDictionary
         #endregion
 
         #region PK
-        public void modificaPk(Entity Ent, int ind, BinaryWriter write)
+        public void modifyPK(Entity Ent, int ind, BinaryWriter write)
         {
 
             write.BaseStream.Seek(Ent.attributes[ind].indexDir, SeekOrigin.Begin);
@@ -293,7 +293,7 @@ namespace DataDictionary
         #region FK
 
         ////MÉTODO DE MODIFICACIÓN DE CLAVE SECUNDARIA
-        public void ModificaFk(Entity Ent, int ind, BinaryWriter write)
+        public void modifyFK(Entity Ent, int ind, BinaryWriter write)
         {
             write.BaseStream.Seek(Ent.attributes[ind].indexDir, SeekOrigin.Begin);
             foreach (ForeignKey f in Ent.fk)
@@ -302,7 +302,7 @@ namespace DataDictionary
                 {
                     write.Write(stringToChar(f.oClave.ToString(), Ent.attributes[ind].length));
 
-                    foreach (long l in f.lDirecciones)
+                    foreach (long l in f.directions)
                     {
                         write.Write(l);
                     }
@@ -311,7 +311,7 @@ namespace DataDictionary
                 {
                     write.Write(Convert.ToInt32(f.oClave));
 
-                    foreach (long l in f.lDirecciones)
+                    foreach (long l in f.directions)
                     {
                         write.Write(l);
                     }
@@ -324,22 +324,22 @@ namespace DataDictionary
         #region B+
 
         //MÉTODO PARA ESCRIBIER EL NODO EN EL ARCHIVO
-        public void writeNode(Nodo n, BinaryWriter w)
+        public void writeNode(Node n, BinaryWriter w)
         {
             long dir = -1;
             int dat = 0;
-            w.BaseStream.Seek(n.lDireccionN, SeekOrigin.Begin);
-            w.Write(n.lDireccionN);
-            w.Write(n.cTipo);
+            w.BaseStream.Seek(n.nodeDir, SeekOrigin.Begin);
+            w.Write(n.nodeDir);
+            w.Write(n.type);
 
-            if (n.cTipo == 'H')
+            if (n.type == 'H')
             {
                 for (int i = 0; i < 4; i++)
                 {
-                    if (n.iDatos.Count > i)
+                    if (n.dataL.Count > i)
                     {
-                        w.Write(n.lDirecciones[i]);
-                        w.Write(n.iDatos[i]);
+                        w.Write(n.directions[i]);
+                        w.Write(n.dataL[i]);
                     }
                     else
                     {
@@ -351,13 +351,13 @@ namespace DataDictionary
             }
             else
             {
-                w.Write(n.lDirecciones[0]);
+                w.Write(n.directions[0]);
                 for (int i = 0; i < 4; i++)
                 {
-                    if (n.iDatos.Count > i)
+                    if (n.dataL.Count > i)
                     {
-                        w.Write(n.iDatos[i]);
-                        w.Write(n.lDirecciones[i + 1]);
+                        w.Write(n.dataL[i]);
+                        w.Write(n.directions[i + 1]);
                     }
                     else
                     {
@@ -368,44 +368,44 @@ namespace DataDictionary
             }
         }
         //MÉTODO PARA LEER UN NODO
-        public Nodo readNode(long dirIndice, BinaryReader R)
+        public Node readNode(long dirIndice, BinaryReader R)
         {
-            Nodo nodo;
+            Node node;
             long dir;
-            int dato;
-            nodo = new Nodo();
+            int key;
+            node = new Node();
             R.BaseStream.Seek(dirIndice, SeekOrigin.Begin);
-            nodo.lDireccionN = R.ReadInt64();
-            nodo.cTipo = R.ReadChar();
-            if (nodo.cTipo == 'H')
+            node.nodeDir = R.ReadInt64();
+            node.type = R.ReadChar();
+            if (node.type == 'H')
             {
                 for (int i = 0; i < 4; i++)
                 {
                     dir = R.ReadInt64();
-                    dato = R.ReadInt32();
-                    if (dato != 0)
+                    key = R.ReadInt32();
+                    if (key != 0)
                     {
-                        nodo.lDirecciones.Add(dir);
-                        nodo.iDatos.Add(dato);
+                        node.directions.Add(dir);
+                        node.dataL.Add(key);
                     }
                 }
             }
             else
             {
                 dir = R.ReadInt64();
-                nodo.lDirecciones.Add(dir);
+                node.directions.Add(dir);
                 for (int i = 0; i < 4; i++)
                 {
-                    dato = R.ReadInt32();
+                    key = R.ReadInt32();
                     dir = R.ReadInt64();
-                    if (dato != 0)
+                    if (key != 0)
                     {
-                        nodo.iDatos.Add(dato);
-                        nodo.lDirecciones.Add(dir);
+                        node.dataL.Add(key);
+                        node.directions.Add(dir);
                     }
                 }
             }
-            return nodo;
+            return node;
         }
 
         #endregion

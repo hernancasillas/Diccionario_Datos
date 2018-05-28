@@ -18,7 +18,7 @@ namespace DataDictionary
         public List<Data> data { get; set; }
         public List<PrimaryKey> pk { get; set; }
         public List<ForeignKey> fk { get; set; }
-        public List<Nodo> nodos { get; set; }
+        public List<Node> nodes { get; set; }
 
         public Entity()
         {
@@ -31,7 +31,7 @@ namespace DataDictionary
             data = new List<Data>();
             pk = new List<PrimaryKey>();
             fk = new List<ForeignKey>();
-            nodos = new List<Nodo>();
+            nodes = new List<Node>();
         }
 
         public void SaveEntity(FileStream Archivo, BinaryWriter W)//Graba en el archivo los datos de la entidad

@@ -101,6 +101,8 @@ namespace DataDictionary
                     break;
                 case 1: lengthTextBox.Text = "1";
                     break;
+                case 2: lengthTextBox.Text = "30";
+                    break;
                 
             }
         }

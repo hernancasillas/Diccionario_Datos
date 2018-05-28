@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace DataDictionary
 {
-    public class Nodo
+    public class Node
     {
 
         private long DirNodo = -1;
@@ -14,31 +14,31 @@ namespace DataDictionary
         private List<long> lApuntadores;
         private List<int> idatos;
 
-        public Nodo()
+        public Node()
         {
             lApuntadores = new List<long>();
             idatos = new List<int>();
         }
 
-        public long lDireccionN
+        public long nodeDir
         {
             get { return DirNodo; }
             set { DirNodo = value; }
         }
 
-        public List<long> lDirecciones
+        public List<long> directions
         {
             get { return lApuntadores; }
             set { lApuntadores = value; }
         }
 
-        public List<int> iDatos
+        public List<int> dataL
         {
             get { return idatos; }
             set { idatos = value; }
         }
 
-        public char cTipo
+        public char type
         {
             get { return tipo; }
             set { tipo = value; }

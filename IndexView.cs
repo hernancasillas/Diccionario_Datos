@@ -91,9 +91,9 @@ namespace DataDictionary
                 r[j] = entity.fk[i].oClave;
 
                 j = 1;
-                for (int c = 0; c < entity.fk[i].lDirecciones.Count; c++)
+                for (int c = 0; c < entity.fk[i].directions.Count; c++)
                 {
-                    r[j] = entity.fk[i].lDirecciones[c];
+                    r[j] = entity.fk[i].directions[c];
                     j++;
                 }
                 dataTFk.Rows.Add(r);
@@ -104,24 +104,24 @@ namespace DataDictionary
         {
             DataRow r;
             dataTTree.Clear();
-            for (int i = 0; i < entity.nodos.Count; i++)
+            for (int i = 0; i < entity.nodes.Count; i++)
             {
                 r = dataTTree.NewRow();
                 int j = 0, d = 0, a = 0;
-                r[j] = entity.nodos[i].lDireccionN;
+                r[j] = entity.nodes[i].nodeDir;
                 j = 1;
-                r[j] = entity.nodos[i].cTipo;
+                r[j] = entity.nodes[i].type;
                 j = 2;
-                while (d < entity.nodos[i].iDatos.Count || a < entity.nodos[i].lDirecciones.Count)
+                while (d < entity.nodes[i].dataL.Count || a < entity.nodes[i].directions.Count)
                 {
                     if (j % 2 == 0)
                     {
-                        r[j] = entity.nodos[i].lDirecciones[a];
+                        r[j] = entity.nodes[i].directions[a];
                         a++;
                     }
                     else
                     {
-                        r[j] = entity.nodos[i].iDatos[d];
+                        r[j] = entity.nodes[i].dataL[d];
                         d++;
                     }
                     j++;
