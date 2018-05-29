@@ -247,6 +247,8 @@ namespace DataDictionary
 
         public void modifyAttribute(long dir, Attribute attribute)
         {
+            if (stream != null)
+                stream.Close();
             stream = new FileStream(fileName, FileMode.Open, FileAccess.Write);
             write = new BinaryWriter(stream);
 
@@ -349,7 +351,7 @@ namespace DataDictionary
                 }
                 w.Write(dir);
             }
-            else
+            else// if(n.type == 'I')
             {
                 w.Write(n.directions[0]);
                 for (int i = 0; i < 4; i++)
@@ -365,6 +367,10 @@ namespace DataDictionary
                         w.Write(dir);
                     }
                 }
+            }
+            //else
+            {
+
             }
         }
         //MÉTODO PARA LEER UN NODO

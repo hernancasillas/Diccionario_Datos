@@ -360,7 +360,8 @@ namespace DataDictionary
                                                 }
                                             }
                                             if (atrib.indexType == 4)
-                                            { 
+                                            {
+                                                isTree = true;
                                                 Node n;
                                                 Node nuevo = idxFile.readNode(atrib.indexDir, R);
                                                 selectedEnt.nodes.Add(nuevo);
@@ -380,6 +381,7 @@ namespace DataDictionary
                                                         }
                                                     }
                                                 }
+                                                
                                             }
                                             copySortedListPK();
                                             copySortedListFK();
@@ -418,6 +420,7 @@ namespace DataDictionary
                                 }
                                 entities.Add(selectedEnt); //Agrega la entidad a memoria
                                 pos = selectedEnt.nextDir;//Asigna a pos la dirreccion de la siguiente entidad
+                                //fillDataGridTree();
                             }
                         }
                         else
@@ -862,6 +865,7 @@ namespace DataDictionary
             else
             {
                 DataTableArbol();
+                fillDataGridTree();
                 isTree = true;
             }
         }
@@ -1042,6 +1046,16 @@ namespace DataDictionary
                             Root.dataL.Add(prevNode.dataL[2]);
                             SplitNodeNinsertKeys(prevNode, newInter);
                             sortNodes(newInter);
+                            int count = selectedEnt.nodes.Count;
+                            if(newInter.dataL.Count == 3)
+                            {
+                                newInter.dataL.RemoveAt(0);
+                                newInter.directions.RemoveAt(0);
+                                newInter.directions.Add(selectedEnt.nodes[count - 1].nodeDir);
+                                Root.directions.Add(newInter.nodeDir);
+                                prevNode.directions.RemoveAt(prevNode.directions.Count - 1);
+                                sortNodes(Root);
+                            }
                             idxFile.writeNode(newInter, w);
                             idxFile.writeNode(Root, w);
                             idxFile.writeNode(prevNode, w);
@@ -1969,7 +1983,7 @@ namespace DataDictionary
             {
                 if (i != selectedEnt.data.Count - 1)
                 {
-                    selectedEnt.data[i].nextDir = selectedEnt.data[i + 1].nextDir;
+                    selectedEnt.data[i].nextDir = selectedEnt.data[i + 1].dataDir;
                 }
                 else
                 {
